@@ -1,0 +1,11 @@
+node_modules
+.git
+.data
+.npm-cache
+.env
+.env.*
+apps/web/.next
+apps/web/.next-e2e
+apps/api/dist
+test-results
+playwright-report

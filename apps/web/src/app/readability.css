@@ -1,0 +1,194 @@
+.topbar .search-box input {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  min-height: 28px;
+  font-size: 11px;
+}
+.external-support {
+  max-width: 620px;
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+  padding: 28px 0 40px;
+}
+.external-support h2 {
+  font-family: var(--display);
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.1;
+}
+.external-support p {
+  max-width: 58ch;
+  line-height: 1.7;
+}
+.external-support > svg {
+  color: var(--coffee);
+}
+.category-filters button {
+  min-height: 27px;
+}
+.idea-post .post-actions > button,
+.idea-post .post-actions > a {
+  min-height: 28px;
+}
+@media (min-width: 701px) {
+  .post-body p {
+    font-size: 12px;
+    line-height: 1.8;
+  }
+  .post-body h2 {
+    font-size: 22px;
+  }
+  .creator > div > a {
+    font-size: 11px;
+  }
+  .creator > div > span {
+    font-size: 9px;
+  }
+  .post-actions > button,
+  .post-actions > a {
+    font-size: 10px;
+  }
+  .post-tags {
+    font-size: 9px;
+  }
+  .post-body .category-label {
+    font-size: 9px;
+  }
+  .feed-tabs > button {
+    font-size: 11px;
+    min-height: 42px;
+  }
+  .category-filters button {
+    font-size: 9px;
+  }
+  .rail-welcome p {
+    font-size: 11px;
+  }
+  .building-row strong {
+    font-size: 11px;
+  }
+  .hero-footnote {
+    font-size: 9px;
+  }
+}
+@media (min-width: 701px) and (max-width: 1250px) {
+  .feed-tabs {
+    gap: 15px;
+  }
+  .feed-tabs > button {
+    font-size: 10px;
+  }
+  .post-actions {
+    gap: 12px;
+  }
+  .post-actions > button,
+  .post-actions > a {
+    font-size: 9px;
+  }
+}
+@media (max-width: 700px) {
+  .category-filters button {
+    min-height: 30px;
+    font-size: 8px;
+  }
+  .post-actions > button,
+  .post-actions > a {
+    min-height: 30px;
+  }
+}
+.preview-annotation {
+  color: #656b55;
+}
+.rail-welcome > .eyebrow,
+.rail-welcome p {
+  color: #59634f;
+}
+.rail-number {
+  color: #677158;
+}
+body[data-scroll-locked] .toast {
+  bottom: auto;
+  top: 15px;
+}
+.nav-item {
+  font-size: 13px;
+}
+.hero-copy > p {
+  font-size: 14px;
+}
+.form label {
+  font-size: 12px;
+}
+@media (min-width: 701px) {
+  .post-body p {
+    font-size: 13px;
+    line-height: 1.8;
+  }
+  .creator > div > a {
+    font-size: 12px;
+  }
+  .creator > div > span {
+    font-size: 10px;
+  }
+  .post-labels .stage {
+    font-size: 10px;
+  }
+  .post-labels .demo-label {
+    font-size: 8px;
+  }
+  .post-actions > button,
+  .post-actions > a {
+    font-size: 11px;
+  }
+  .post-tags {
+    font-size: 10px;
+  }
+  .category-filters button {
+    font-size: 10px;
+  }
+  .rail-welcome p,
+  .building-row strong {
+    font-size: 12px;
+  }
+}
+@media (min-width: 701px) and (max-width: 1250px) {
+  .post-actions > button,
+  .post-actions > a {
+    font-size: 10px;
+  }
+}
+@media (max-width: 700px) {
+  .creator > div > a {
+    font-size: 11px;
+  }
+  .creator > div > span {
+    font-size: 9px;
+  }
+  .post-body p {
+    font-size: 13px;
+  }
+  .post-actions > button,
+  .post-actions > a {
+    font-size: 10px;
+  }
+  .post-body .category-label {
+    font-size: 9px;
+  }
+  .post-labels .stage {
+    font-size: 8px;
+  }
+  .post-tags {
+    font-size: 10px;
+  }
+  .hero-kicker,
+  .hero-footnote {
+    font-size: 9px;
+  }
+  .feed-tabs > button {
+    font-size: 11px;
+  }
+  .category-filters button {
+    font-size: 9px;
+  }
+}

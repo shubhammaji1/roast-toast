@@ -1,0 +1,34 @@
+{
+  "name": "@roast/web",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@fontsource/barlow-condensed": "5.3.0",
+    "@fontsource/dm-sans": "5.3.0",
+    "@fontsource/instrument-serif": "5.3.0",
+    "@hookform/resolvers": "7.0.3",
+    "@radix-ui/react-dialog": "1.3.1",
+    "@roast/domain": "*",
+    "@tanstack/react-query": "5.106.1",
+    "better-auth": "1.7.17",
+    "lucide-react": "1.69.0",
+    "next": "16.4.5",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-hook-form": "7.84.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.4",
+    "@types/node": "26.6.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "tailwindcss": "4.3.4",
+    "typescript": "6.0.3"
+  },
+  "scripts": {
+    "dev": "node ../../node_modules/next/dist/bin/next dev --webpack -p 3000",
+    "build": "node ../../node_modules/next/dist/bin/next build --webpack",
+    "start": "node ../../node_modules/next/dist/bin/next start -p 3000"
+  }
+}
