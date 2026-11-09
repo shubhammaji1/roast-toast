@@ -20,6 +20,8 @@ import {
   ideaSchema,
   roastSchema,
   improvementSchema,
+  experimentSchema,
+  experimentProgressSchema,
   profileSchema,
   stages,
   communityConfigSchema,
@@ -147,6 +149,7 @@ export async function createApp(auth: Auth) {
   });
   app.all("/api/v1/auth/{*splat}", toNodeHandler(auth));
   app.use(express.json({ limit: "32kb" }));
+  app.get("/", (_req, res) => res.redirect(307, API_BASE_PATH));
   app.get(API_BASE_PATH, (_req, res) =>
     res.json({
       name: "Roast & Toast API",
@@ -568,46 +571,74 @@ export async function createApp(auth: Auth) {
         .select("title revision createdAt")
         .limit(50),
     ]);
-    res.json({
-      idea: await decorate(idea, req),
-      roasts: await Promise.all(
-        roasts.map(async (r) => ({
-          ...doc(r),
-          author: await profile(r.authorId),
-          helpful: await Reaction.countDocuments({
+    const detailRoasts = await Promise.all(
+      roasts.map(async (r) => ({
+        ...doc(r),
+        author: await profile(r.authorId),
+        helpful: await Reaction.countDocuments({
+          targetId: String(r._id),
+          kind: "helpful",
+        }),
+        voted: Boolean(
+          req.member &&
+          (await Reaction.exists({
+            userId: req.member.userId,
             targetId: String(r._id),
             kind: "helpful",
-          }),
-          voted: Boolean(
-            req.member &&
-            (await Reaction.exists({
-              userId: req.member.userId,
-              targetId: String(r._id),
-              kind: "helpful",
-            })),
+          })),
+        ),
+        replies: await Promise.all(
+          (
+            await Reply.find({
+              roastId: String(r._id),
+              authorId: { $nin: blocked },
+            })
+              .sort({ createdAt: 1 })
+              .limit(50)
+          ).map(async (reply) => ({
+            ...doc(reply),
+            author: await profile(reply.authorId),
+          })),
+        ),
+      })),
+    );
+    const detailImprovements = await Promise.all(
+      improvements.map(async (s) => ({
+        ...doc(s),
+        author: await profile(s.authorId),
+      })),
+    );
+    const ownsIdea = req.member?.userId === idea.authorId;
+    const categoryCounts = new Map<string, number>();
+    for (const suggestion of improvements) {
+      categoryCounts.set(
+        suggestion.category,
+        (categoryCounts.get(suggestion.category) || 0) + 1,
+      );
+    }
+    const feedbackSummary = ownsIdea
+      ? {
+          roastCount: detailRoasts.length,
+          helpfulVotes: detailRoasts.reduce(
+            (total, roast) => total + roast.helpful,
+            0,
           ),
-          replies: await Promise.all(
-            (
-              await Reply.find({
-                roastId: String(r._id),
-                authorId: { $nin: blocked },
-              })
-                .sort({ createdAt: 1 })
-                .limit(50)
-            ).map(async (reply) => ({
-              ...doc(reply),
-              author: await profile(reply.authorId),
-            })),
-          ),
-        })),
-      ),
-      improvements: await Promise.all(
-        improvements.map(async (s) => ({
-          ...doc(s),
-          author: await profile(s.authorId),
-        })),
-      ),
+          suggestionCount: improvements.length,
+          implementedSuggestions: improvements.filter(
+            (suggestion) => suggestion.state === "Implemented",
+          ).length,
+          suggestionCategories: [...categoryCounts]
+            .map(([category, count]) => ({ category, count }))
+            .sort((a, b) => b.count - a.count || a.category.localeCompare(b.category))
+            .slice(0, 3),
+        }
+      : null;
+    res.json({
+      idea: await decorate(idea, req),
+      roasts: detailRoasts,
+      improvements: detailImprovements,
       milestones: milestones.map(doc),
+      feedbackSummary,
       supporters: [],
       revisions: revisions.map((r) => ({
         id: String(r._id),
@@ -898,6 +929,43 @@ export async function createApp(auth: Auth) {
         ),
       );
       res.status(201).json(doc(milestone));
+    },
+  );
+  app.post(
+    "/api/v1/ideas/:id/experiments",
+    writeLimit,
+    async (req: AuthedRequest, res) => {
+      const p = member(req);
+      const idea = await loadIdea(req, req.params.id, true);
+      const input = experimentSchema.parse(req.body);
+      const experiment = await MilestoneModel.create({
+        kind: "experiment",
+        title: input.hypothesis,
+        body: input.experiment,
+        hypothesis: input.hypothesis,
+        successCriteria: input.successCriteria,
+        status: "Planned",
+        outcome: "",
+        stage: idea.stage,
+        ideaId: String(idea._id),
+        authorId: p.userId,
+      });
+      res.status(201).json(doc(experiment));
+    },
+  );
+  app.patch(
+    "/api/v1/experiments/:id",
+    writeLimit,
+    async (req: AuthedRequest, res) => {
+      const experiment = await MilestoneModel.findById(id(req.params.id));
+      if (!experiment || experiment.kind !== "experiment")
+        return fail(404, "Experiment not found.");
+      await loadIdea(req, experiment.ideaId, true);
+      const input = experimentProgressSchema.parse(req.body);
+      experiment.status = input.status;
+      if (input.outcome !== undefined) experiment.outcome = input.outcome;
+      await experiment.save();
+      res.json(doc(experiment));
     },
   );
   app.post(

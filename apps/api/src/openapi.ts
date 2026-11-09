@@ -4,6 +4,8 @@ import {
   ideaSchema,
   roastSchema,
   improvementSchema,
+  experimentSchema,
+  experimentProgressSchema,
   profileSchema,
 } from "@roast/domain";
 
@@ -14,6 +16,8 @@ const bodies: Record<string, z.ZodType> = {
   }),
   "POST /api/v1/ideas/{id}/roasts": roastSchema,
   "POST /api/v1/ideas/{id}/improvements": improvementSchema,
+  "POST /api/v1/ideas/{id}/experiments": experimentSchema,
+  "PATCH /api/v1/experiments/{id}": experimentProgressSchema,
   "PATCH /api/v1/profiles/me": profileSchema,
   "POST /api/v1/ideas/{id}/reactions": z.object({
     kind: z.enum(["interest", "bookmark", "follow"]),

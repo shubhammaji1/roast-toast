@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   ChevronLeft,
   ChevronRight,
+  Flame,
 } from "lucide-react";
 import { useState } from "react";
 import { useApp } from "./providers";
@@ -146,13 +147,52 @@ export function Shell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
         <footer className="footer">
-          <span>
-            roast & toast. <span>Made for ideas with a little potential.</span>
-          </span>
-          <div>
-            <Link href="/community">Table manners</Link>
-            <Link href="/privacy">Privacy</Link>
-            <Link href="/terms">Terms</Link>
+          <div className="footer-last-call">
+            <div className="footer-callout">
+              <span className="footer-kicker">
+                <Flame size={13} />
+                THE TABLE IS STILL OPEN
+              </span>
+              <h2>
+                Got an idea
+                <br />
+                that needs <em>a little heat?</em>
+              </h2>
+              <p>Bring the rough draft. Leave with a next step.</p>
+              <Link className="footer-cta" href="/new">
+                Pitch an idea
+                <ArrowUpRight size={16} />
+              </Link>
+              <span className="footer-coffee-ring" aria-hidden="true" />
+            </div>
+            <div className="footer-receipt">
+              <div className="footer-brand">
+                <Link href="/" aria-label="Roast and Toast home">
+                  roast <span>&</span> toast<span className="footer-period">.</span>
+                </Link>
+                <p>Made for ideas with a little potential.</p>
+              </div>
+              <nav className="footer-links" aria-label="Explore Roast and Toast">
+                <span>TAKE A SEAT</span>
+                <Link href="/feed">The table</Link>
+                <Link href="/explore">Explore ideas</Link>
+                <Link href="/new">Pitch an idea</Link>
+              </nav>
+              <nav className="footer-links" aria-label="Community and information">
+                <span>HOUSE NOTES</span>
+                <Link href="/community">Table manners</Link>
+                <Link href="/privacy">Privacy</Link>
+                <Link href="/terms">Terms</Link>
+              </nav>
+              <span className="footer-stamp" aria-hidden="true">
+                MADE OF
+                <br />
+                WHAT IF
+              </span>
+              <span className="footer-copyright">
+                © {new Date().getFullYear()} roast & toast
+              </span>
+            </div>
           </div>
         </footer>
       </div>

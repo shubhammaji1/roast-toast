@@ -35,7 +35,7 @@ The `/auth/*` routes below serve private moderator accounts. Public posting and 
 | --------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `GET /ideas`                | `tab`, `q` (100 chars), `category`, `limit` (1–20, default 8), `cursor`; returns `{ideas,nextCursor}`  |
 | `POST /ideas`               | Idea contract below; creates a browser identity when needed; returns the new idea with its actual `id` |
-| `GET /ideas/:id`            | Idea, roasts/replies, improvements, milestones, an empty legacy supporters list, revision summaries    |
+| `GET /ideas/:id`            | Idea, roasts/replies, improvements, milestones/experiments, an empty legacy supporters list, revision summaries; creator-only feedback signal summary |
 | `PATCH /ideas/:id`          | Complete idea contract plus current integer `version`; author only; conflicts return 409               |
 | `DELETE /ideas/:id`         | Author only; soft-deletes and removes read access                                                      |
 | `POST /ideas/:id/reactions` | `{kind:"interest"                                                                                      | "bookmark" | "follow",active:boolean}`; explicit state makes repeated requests idempotent |
@@ -61,13 +61,15 @@ Create with `POST /api/v1/ideas` and use the `id` returned in the HTTP 201 JSON 
 | `POST /ideas/:id/improvements`   | Category and body (12–2000)                                                                                    |
 | `PATCH /improvements/:id`        | Creator-only state: Exploring/Accepted/Declined/Implemented                                                    |
 | `POST /ideas/:id/milestones`     | Creator-only title (5–140), body (12–2000), stage; self-reported, updates idea stage                           |
+| `POST /ideas/:id/experiments`    | Creator-only hypothesis (8–240), experiment (12–1500), success criteria (5–300); starts Planned                |
+| `PATCH /experiments/:id`         | Creator-only status (Planned/In progress/Complete/Inconclusive) and optional outcome (up to 1000)               |
 | `POST /ideas/:id/collaborations` | Body (20–2000), one request per idea/applicant                                                                 |
 | `GET /collaborations`            | Signed-in applicant or receiving creator's requests                                                            |
 | `PATCH /collaborations/:id`      | Receiving creator only, pending request → accepted/declined                                                    |
 | `GET /notifications`             | Current member, newest 100                                                                                     |
 | `POST /notifications/read`       | Marks only current member's notifications read                                                                 |
 
-Current detail bounds: 100 roasts, improvements and milestones, 50 replies per roast, 50 supporters/revisions. Dedicated pagination for very large discussions is a documented next production step; no unlimited response is promised.
+The creator-only feedback summary counts visible roasts, helpful votes, suggestions, implemented suggestions, and the three most common suggestion categories. It is descriptive, not an AI-generated verdict. Current detail bounds: 100 roasts, improvements and milestones, 50 replies per roast, 50 supporters/revisions. Dedicated pagination for very large discussions is a documented next production step; no unlimited response is promised.
 
 ## Trust and moderation
 

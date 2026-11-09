@@ -27,6 +27,7 @@ The canonical API is `/api/v1`: create posts with `POST /api/v1/ideas`, then rea
 ## Included features
 
 - Publish, save drafts, revise, archive, and delete ideas; public/unlisted visibility; optimistic version checks and revision history.
+- Plan low-cost validation experiments with success criteria, track outcomes, and review a private creator-only synthesis of feedback signals.
 - Structured roasts and replies, helpful reactions, creator acknowledgments, suggestions, milestone updates, collaborations, and notifications.
 - Search, categories, latest/trending/building feeds, cursor pagination, saved ideas, and follows.
 - Private draft images, validated image uploads, profile privacy, mutual blocks, reports, suspensions/appeals, and audited moderation.

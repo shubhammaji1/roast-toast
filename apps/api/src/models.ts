@@ -30,7 +30,10 @@ export const RoastModel = repository("roasts", {
 export const Reply = repository("replies");
 export const Reaction = repository("reactions");
 export const Improvement = repository("improvements", { state: "Suggested" });
-export const MilestoneModel = repository("milestones", { selfReported: true });
+export const MilestoneModel = repository("milestones", {
+  selfReported: true,
+  kind: "update",
+});
 export const Collaboration = repository("collaborations", { state: "pending" });
 export const Notification = repository("notifications");
 export const Report = repository("reports", { state: "open" });

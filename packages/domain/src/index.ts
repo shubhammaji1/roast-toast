@@ -156,6 +156,15 @@ export const improvementSchema = z.object({
     "Distribution",
   ]),
 });
+export const experimentSchema = z.object({
+  hypothesis: z.string().trim().min(8).max(240),
+  experiment: z.string().trim().min(12).max(1500),
+  successCriteria: z.string().trim().min(5).max(300),
+});
+export const experimentProgressSchema = z.object({
+  status: z.enum(["Planned", "In progress", "Complete", "Inconclusive"]),
+  outcome: z.string().trim().max(1000).optional(),
+});
 export const profileSchema = z.object({
   name: z.string().trim().min(2).max(60),
   username: z
@@ -237,6 +246,18 @@ export type Milestone = {
   createdAt: string;
   stage: string;
   selfReported: boolean;
+  kind?: "update" | "experiment";
+  hypothesis?: string;
+  successCriteria?: string;
+  status?: "Planned" | "In progress" | "Complete" | "Inconclusive";
+  outcome?: string;
+};
+export type FeedbackSummary = {
+  roastCount: number;
+  helpfulVotes: number;
+  suggestionCount: number;
+  implementedSuggestions: number;
+  suggestionCategories: { category: string; count: number }[];
 };
 export type Order = {
   id: string;
@@ -254,6 +275,7 @@ export type Detail = {
   roasts: Roast[];
   improvements: Suggestion[];
   milestones: Milestone[];
+  feedbackSummary: FeedbackSummary | null;
   supporters: { id: string; message: string; name: string }[];
   revisions: {
     id: string;

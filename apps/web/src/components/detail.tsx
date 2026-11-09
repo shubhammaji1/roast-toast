@@ -89,6 +89,7 @@ export function IdeaDetail({ id }: { id: string }) {
     try {
       if (form === "improvement") await send(`/ideas/${id}/improvements`, data);
       if (form === "milestone") await send(`/ideas/${id}/milestones`, data);
+      if (form === "experiment") await send(`/ideas/${id}/experiments`, data);
       if (form === "collaborate")
         await send(`/ideas/${id}/collaborations`, data);
       setForm("");
@@ -98,6 +99,8 @@ export function IdeaDetail({ id }: { id: string }) {
           ? "Your note is with the creator. A good start."
           : form === "milestone"
             ? "Another step, on the record."
+            : form === "experiment"
+              ? "Your experiment is part of the build journey."
             : "A useful nudge. Your suggestion is on the table.",
       );
     } catch (e) {
@@ -369,7 +372,36 @@ export function IdeaDetail({ id }: { id: string }) {
                   </button>
                 </div>
                 {detail.improvements.length ? (
-                  detail.improvements.map((s) => (
+                  <>
+                    {owner && detail.feedbackSummary && (
+                      <section
+                        className="feedback-summary"
+                        aria-labelledby="feedback-summary-title"
+                      >
+                        <div>
+                          <span className="eyebrow">YOUR FEEDBACK AT A GLANCE</span>
+                          <h3 id="feedback-summary-title">What the community is telling you.</h3>
+                          <p>Only you see this overview. It counts feedback signals; it does not judge your idea.</p>
+                        </div>
+                        <div className="feedback-metrics">
+                          <span><strong>{detail.feedbackSummary.roastCount}</strong> roasts</span>
+                          <span><strong>{detail.feedbackSummary.helpfulVotes}</strong> helpful votes</span>
+                          <span><strong>{detail.feedbackSummary.suggestionCount}</strong> suggestions</span>
+                          <span><strong>{detail.feedbackSummary.implementedSuggestions}</strong> implemented</span>
+                        </div>
+                        {detail.feedbackSummary.suggestionCategories.length > 0 && (
+                          <div className="feedback-categories">
+                            <span className="eyebrow">MOST COMMON SUGGESTION AREAS</span>
+                            {detail.feedbackSummary.suggestionCategories.map(({ category, count }) => (
+                              <span className="category-label" key={category}>
+                                {category} · {count}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </section>
+                    )}
+                    {detail.improvements.map((s) => (
                     <article className="suggestion" key={s.id}>
                       <div className="suggestion-labels">
                         <span className="category-label">{s.category}</span>
@@ -409,11 +441,32 @@ export function IdeaDetail({ id }: { id: string }) {
                         )}
                       </div>
                     </article>
-                  ))
+                    ))}
+                  </>
                 ) : (
-                  <Empty title="Room to make it better.">
-                    Suggest a small, specific change the creator could try.
-                  </Empty>
+                  <>
+                    {owner && detail.feedbackSummary && (
+                      <section
+                        className="feedback-summary"
+                        aria-labelledby="feedback-summary-title"
+                      >
+                        <div>
+                          <span className="eyebrow">YOUR FEEDBACK AT A GLANCE</span>
+                          <h3 id="feedback-summary-title">What the community is telling you.</h3>
+                          <p>Only you see this overview. It counts feedback signals; it does not judge your idea.</p>
+                        </div>
+                        <div className="feedback-metrics">
+                          <span><strong>{detail.feedbackSummary.roastCount}</strong> roasts</span>
+                          <span><strong>{detail.feedbackSummary.helpfulVotes}</strong> helpful votes</span>
+                          <span><strong>{detail.feedbackSummary.suggestionCount}</strong> suggestions</span>
+                          <span><strong>{detail.feedbackSummary.implementedSuggestions}</strong> implemented</span>
+                        </div>
+                      </section>
+                    )}
+                    <Empty title="Room to make it better.">
+                      Suggest a small, specific change the creator could try.
+                    </Empty>
+                  </>
                 )}
               </>
             )}
@@ -427,20 +480,93 @@ export function IdeaDetail({ id }: { id: string }) {
                     <h2>One step at a time.</h2>
                   </div>
                   {owner && (
-                    <button
-                      className="button secondary"
-                      onClick={() => {
-                        setError("");
-                        setForm("milestone");
-                      }}
-                    >
-                      <Plus size={16} />
-                      Post an update
-                    </button>
+                    <div className="discussion-actions">
+                      <button
+                        className="button secondary"
+                        onClick={() => {
+                          setError("");
+                          setForm("experiment");
+                        }}
+                      >
+                        <Lightbulb size={16} />
+                        Plan an experiment
+                      </button>
+                      <button
+                        className="button secondary"
+                        onClick={() => {
+                          setError("");
+                          setForm("milestone");
+                        }}
+                      >
+                        <Plus size={16} />
+                        Post an update
+                      </button>
+                    </div>
                   )}
                 </div>
+                <section className="experiment-list" aria-labelledby="experiments-title">
+                  <div className="experiment-list-heading">
+                    <div>
+                      <span className="eyebrow">TEST THE ASSUMPTIONS</span>
+                      <h3 id="experiments-title">Validation plan</h3>
+                    </div>
+                    <p>Small, real-world tests turn guesses into learning.</p>
+                  </div>
+                  {detail.milestones.filter((m) => m.kind === "experiment").length ? (
+                    detail.milestones
+                      .filter((m) => m.kind === "experiment")
+                      .map((experiment) => (
+                        <article className="experiment-card" key={experiment.id}>
+                          <div className="suggestion-labels">
+                            <span className="eyebrow">ASSUMPTION</span>
+                            <span className="stage progress">{experiment.status || "Planned"}</span>
+                          </div>
+                          <h4>{experiment.hypothesis || experiment.title}</h4>
+                          <p><strong>Test:</strong> {experiment.body}</p>
+                          <p><strong>Success looks like:</strong> {experiment.successCriteria}</p>
+                          {experiment.outcome && (
+                            <p className="experiment-outcome"><strong>What happened:</strong> {experiment.outcome}</p>
+                          )}
+                          {owner && (
+                            <form
+                              className="experiment-progress"
+                              onSubmit={async (event) => {
+                                event.preventDefault();
+                                const values = Object.fromEntries(new FormData(event.currentTarget));
+                                try {
+                                  await send(`/experiments/${experiment.id}`, values, "PATCH");
+                                  refresh();
+                                  toast("Experiment progress saved.");
+                                } catch (error) {
+                                  toast((error as Error).message);
+                                }
+                              }}
+                            >
+                              <label>
+                                Progress
+                                <select name="status" defaultValue={experiment.status || "Planned"}>
+                                  {["Planned", "In progress", "Complete", "Inconclusive"].map((status) => (
+                                    <option key={status}>{status}</option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label>
+                                Result or learning
+                                <textarea name="outcome" rows={2} maxLength={1000} defaultValue={experiment.outcome || ""} />
+                              </label>
+                              <button className="button secondary">Save progress</button>
+                            </form>
+                          )}
+                        </article>
+                      ))
+                  ) : (
+                    <Empty title="No experiments planned yet.">
+                      Choose one assumption and decide what evidence would change your mind.
+                    </Empty>
+                  )}
+                </section>
                 <div className="journey-timeline">
-                  {detail.milestones.map((m) => (
+                  {detail.milestones.filter((m) => m.kind !== "experiment").map((m) => (
                     <article key={m.id}>
                       <span className="timeline-node" />
                       <div className="timeline-meta">
@@ -570,11 +696,15 @@ export function IdeaDetail({ id }: { id: string }) {
             ? "Make it a little better."
             : form === "milestone"
               ? "What moved forward?"
-              : "Bring something to the table."
+              : form === "experiment"
+                ? "Design a small test."
+                : "Bring something to the table."
         }
         description={
-          form === "collaborate"
-            ? "Tell the creator what you can contribute and why this idea interests you."
+          form === "experiment"
+            ? "Write down an assumption, a low-cost test, and the evidence that would count as success."
+            : form === "collaborate"
+              ? "Tell the creator what you can contribute and why this idea interests you."
             : "Be specific. Small steps count."
         }
       >
@@ -612,20 +742,38 @@ export function IdeaDetail({ id }: { id: string }) {
               </label>
             </>
           )}
-          <label>
-            {form === "collaborate"
-              ? "How would you help?"
-              : form === "milestone"
-                ? "What did you learn or build?"
-                : "What would you change?"}
-            <textarea
-              name="body"
-              rows={5}
-              required
-              minLength={form === "collaborate" ? 20 : 12}
-              maxLength={2000}
-            />
-          </label>
+          {form === "experiment" && (
+            <>
+              <label>
+                What assumption do you want to test?
+                <input name="hypothesis" required minLength={8} maxLength={240} />
+              </label>
+              <label>
+                What is the smallest useful experiment?
+                <textarea name="experiment" rows={3} required minLength={12} maxLength={1500} />
+              </label>
+              <label>
+                What result would count as success?
+                <input name="successCriteria" required minLength={5} maxLength={300} />
+              </label>
+            </>
+          )}
+          {form !== "experiment" && (
+            <label>
+              {form === "collaborate"
+                ? "How would you help?"
+                : form === "milestone"
+                  ? "What did you learn or build?"
+                  : "What would you change?"}
+              <textarea
+                name="body"
+                rows={5}
+                required
+                minLength={form === "collaborate" ? 20 : 12}
+                maxLength={2000}
+              />
+            </label>
+          )}
           {error && (
             <p className="field-error" role="alert">
               {error}
@@ -636,6 +784,8 @@ export function IdeaDetail({ id }: { id: string }) {
               ? "Posting…"
               : form === "collaborate"
                 ? "Send a collaboration request"
+                : form === "experiment"
+                  ? "Add to validation plan"
                 : "Put it on the record"}
             <ArrowUpRight size={16} />
           </button>

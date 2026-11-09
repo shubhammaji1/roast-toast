@@ -75,6 +75,17 @@ afterAll(async () => {
 });
 
 describe("Accounts and access boundaries", () => {
+  it("redirects the API root to its resource index", async () => {
+    const root = await request(app).get("/");
+    expect(root.status).toBe(307);
+    expect(root.headers.location).toBe("/api/v1");
+    const index = await request(app).get(root.headers.location);
+    expect(index.status).toBe(200);
+    expect(index.body).toMatchObject({
+      name: "Roast & Toast API",
+      version: "1",
+    });
+  });
   it("validates uploads and protects draft images and foreign attachments", async () => {
     const image = await sharp({
       create: { width: 8, height: 8, channels: 3, background: "#48644d" },
@@ -406,6 +417,78 @@ describe("The feedback and build loop", () => {
           .send({ state: "accepted" })
       ).status,
     ).toBe(200);
+  });
+  it("tracks validation experiments and keeps feedback synthesis creator-only", async () => {
+    const idea = await publish();
+    const roast = await reviewer
+      .post(`/api/v1/ideas/${idea.id}/roasts`)
+      .send({
+        tone: "Honest",
+        critique: "The lending process needs a clearer trust signal.",
+        suggestion: "Try a simple identity check with a small resident group.",
+        punchline: "",
+      });
+    expect(roast.status).toBe(201);
+    await creator
+      .post(`/api/v1/roasts/${roast.body.id}/helpful`)
+      .send({ active: true });
+    const suggestion = await reviewer
+      .post(`/api/v1/ideas/${idea.id}/improvements`)
+      .send({
+        category: "Feasibility",
+        body: "Test a manual sign-out sheet before building an app.",
+      });
+    expect(suggestion.status).toBe(201);
+    await creator
+      .patch(`/api/v1/improvements/${suggestion.body.id}`)
+      .send({ state: "Implemented" });
+
+    const plan = await creator
+      .post(`/api/v1/ideas/${idea.id}/experiments`)
+      .send({
+        hypothesis: "Residents will lend tools to known neighbors.",
+        experiment: "Offer a paper-based lending trial to ten households.",
+        successCriteria: "At least five loans are completed without issues.",
+      });
+    expect(plan.status, JSON.stringify(plan.body)).toBe(201);
+    expect(plan.body).toMatchObject({
+      kind: "experiment",
+      status: "Planned",
+      successCriteria: "At least five loans are completed without issues.",
+    });
+    expect(
+      (
+        await reviewer
+          .patch(`/api/v1/experiments/${plan.body.id}`)
+          .send({ status: "In progress" })
+      ).status,
+    ).toBe(403);
+    const updated = await creator
+      .patch(`/api/v1/experiments/${plan.body.id}`)
+      .send({
+        status: "Complete",
+        outcome: "Six loans completed; two participants asked for reminders.",
+      });
+    expect(updated.status).toBe(200);
+    expect(updated.body).toMatchObject({
+      status: "Complete",
+      outcome: "Six loans completed; two participants asked for reminders.",
+    });
+
+    const ownerDetail = await creator.get(`/api/v1/ideas/${idea.id}`);
+    expect(ownerDetail.body.feedbackSummary).toMatchObject({
+      roastCount: 1,
+      helpfulVotes: 1,
+      suggestionCount: 1,
+      implementedSuggestions: 1,
+      suggestionCategories: [{ category: "Feasibility", count: 1 }],
+    });
+    expect(ownerDetail.body.milestones[0]).toMatchObject({
+      kind: "experiment",
+      status: "Complete",
+    });
+    expect((await reviewer.get(`/api/v1/ideas/${idea.id}`)).body.feedbackSummary)
+      .toBeNull();
   });
   it("filters search and categories, and paginates without duplicates", async () => {
     const unique = await publish(creator, {
