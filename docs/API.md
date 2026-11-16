@@ -21,8 +21,8 @@ The `/auth/*` routes below serve private moderator accounts. Public posting and 
 | `POST /auth/request-password-reset`  | Email and redirect URL; does not reveal account existence                                                                        |
 | `POST /auth/reset-password`          | Reset token and new password                                                                                                     |
 | `GET /visitor-session`               | Current user/profile plus development and integration availability                                                               |
-| `GET /profiles/:username`            | Public profile and public ideas; privacy settings respected                                                                      |
-| `PATCH /profiles/me`                 | Name, lowercase username, bio, skills, HTTP(S) website, private boolean                                                          |
+| `GET /profiles/:username`            | Public profile details and public ideas, accessible to everyone                                                                  |
+| `PATCH /profiles/me`                 | Name, lowercase username, bio, skills, HTTP(S) website                                                                           |
 | `GET /my-data`                       | Current browser identity's profile and authored/interaction records, JSON attachment                                             |
 | `DELETE /my-data`                    | Visitors use `{confirmation:"DELETE MY DATA"}`; moderator accounts use `DELETE MY ACCOUNT` with a recently authenticated session |
 | `GET /dev/outbox`                    | Development only, authenticated recipient's test emails                                                                          |

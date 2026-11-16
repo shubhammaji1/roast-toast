@@ -19,7 +19,7 @@ let creator: Agent;
 let reviewer: Agent;
 let moderator: Agent;
 let creatorId: string;
-const origin = "http://localhost:3000";
+const origin = "https://roast-toast-1juf.onrender.com";
 const pitch = {
   title: "A neighborhood library for useful things",
   pitch:
@@ -269,11 +269,11 @@ describe("Accounts and access boundaries", () => {
     ).toBe(true);
     expect((await request(app).get("/api/v1/dev/outbox")).status).toBe(401);
   });
-  it("uses unique usernames and respects profile privacy", async () => {
+  it("makes profile details and public ideas visible to everyone", async () => {
     const payload = {
       name: "Creator",
       username: "test_creator",
-      bio: "Private bio text",
+      bio: "A public profile bio",
       skills: ["Research"],
       website: "https://example.com",
       private: true,
@@ -281,15 +281,19 @@ describe("Accounts and access boundaries", () => {
     expect(
       (await creator.patch("/api/v1/profiles/me").send(payload)).status,
     ).toBe(200);
+    const idea = await publish();
+    await ProfileModel.updateOne({ userId: creatorId }, { private: true });
     const guest = await request(app).get("/api/v1/profiles/test_creator");
-    expect(guest.body.profile.bio).toBe("");
-    expect(guest.body.ideas).toEqual([]);
+    expect(guest.body.profile.bio).toBe("A public profile bio");
+    expect(guest.body.profile.skills).toEqual(["Research"]);
+    expect(guest.body.profile.website).toBe("https://example.com");
+    expect(guest.body.ideas.map((item: { id: string }) => item.id)).toContain(
+      idea.id,
+    );
+    expect(guest.body).not.toHaveProperty("private");
     expect(
       (await reviewer.patch("/api/v1/profiles/me").send(payload)).status,
     ).toBe(409);
-    await creator
-      .patch("/api/v1/profiles/me")
-      .send({ ...payload, private: false });
   });
 });
 

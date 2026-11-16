@@ -5,9 +5,8 @@ import {
   Home,
   Compass,
   Bookmark,
-  Lightbulb,
+  CircleHelp,
   Bell,
-  UserRound,
   Plus,
   Search,
   ArrowUpRight,
@@ -24,7 +23,6 @@ const nav = [
   { href: "/feed", label: "The table", icon: Home },
   { href: "/explore", label: "Explore ideas", icon: Compass },
   { href: "/saved", label: "Saved for later", icon: Bookmark },
-  { href: "/my-ideas", label: "My ideas", icon: Lightbulb },
   { href: "/notifications", label: "Notifications", icon: Bell },
 ];
 export function Shell({ children }: { children: React.ReactNode }) {
@@ -223,14 +221,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
           aria-current={path === "/saved" ? "page" : undefined}
         >
           <Bookmark size={20} />
-          <span>Saved</span>
+          <span>Bookmarks</span>
         </Link>
         <Link
-          href="/profile"
-          aria-current={path === "/profile" ? "page" : undefined}
+          href="/about"
+          aria-current={path === "/about" ? "page" : undefined}
         >
-          <UserRound size={20} />
-          <span>You</span>
+          <CircleHelp size={20} />
+          <span>About</span>
         </Link>
       </nav>
     </div>

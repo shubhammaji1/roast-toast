@@ -32,9 +32,7 @@ export function ProfilePage({ username }: { username?: string }) {
   const result = useQuery({
     queryKey: ["profile", target],
     queryFn: () =>
-      api<{ profile: Profile; ideas: Idea[]; private: boolean }>(
-        `/profiles/${target}`,
-      ),
+      api<{ profile: Profile; ideas: Idea[] }>(`/profiles/${target}`),
     enabled: Boolean(target),
   });
   const [edit, setEdit] = useState(false);
@@ -161,10 +159,7 @@ export function ProfilePage({ username }: { username?: string }) {
       </div>
       <div className="profile-bio">
         <p>
-          {person.bio ||
-            (result.data.private
-              ? "This member keeps their profile private."
-              : "Ideas in progress. A bio will follow.")}
+          {person.bio || "Ideas in progress. A bio will follow."}
         </p>
         <div>
           {person.skills.map((skill) => (
@@ -215,15 +210,9 @@ export function ProfilePage({ username }: { username?: string }) {
             ideas.map((idea) => <IdeaCard key={idea.id} idea={idea} />)
           ) : (
             <Empty
-              title={
-                result.data.private
-                  ? "A little privacy, please."
-                  : "The notebook is still open."
-              }
+              title="The notebook is still open."
             >
-              {result.data.private
-                ? "This member has chosen to hide their profile details and idea list."
-                : "No published ideas here yet. Good things take a little thinking."}
+              No published ideas here yet. Good things take a little thinking.
             </Empty>
           )}
         </div>
@@ -434,19 +423,8 @@ export function ProfilePage({ username }: { username?: string }) {
             Website
             <input name="website" type="url" defaultValue={person.website} />
           </label>
-          <label className="checkbox">
-            <input
-              type="checkbox"
-              name="private"
-              defaultChecked={person.private}
-            />
-            <span>
-              Hide my bio, skills, website, and idea list from my profile
-            </span>
-          </label>
           <p className="fine-print">
-            Your name, username, and public posts remain visible in discussions
-            and the feed.
+            Your profile details and published ideas are visible to everyone.
           </p>
           {error && (
             <p className="field-error" role="alert">

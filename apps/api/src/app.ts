@@ -256,13 +256,10 @@ export async function createApp(auth: Auth) {
       role: _role,
       suspended: _suspended,
       deletedAt: _deletedAt,
+      private: _private,
       ...safe
     } = p;
-    return {
-      ...safe,
-      id: String(p._id),
-      ...(p.private ? { bio: "", skills: [], website: "" } : {}),
-    };
+    return { ...safe, id: String(p._id) };
   };
   const blockedIds = async (req: AuthedRequest) =>
     req.member
@@ -1037,22 +1034,17 @@ export async function createApp(auth: Auth) {
     });
     if (!p || (await blockedIds(req)).includes(p.userId))
       return fail(404, "That profile isn’t here.");
-    const own = req.member?.userId === p.userId;
-    const ideas =
-      p.private && !own
-        ? []
-        : await IdeaModel.find({
-            authorId: p.userId,
-            status: "published",
-            visibility: "public",
-            deletedAt: null,
-          })
-            .sort({ createdAt: -1 })
-            .limit(50);
+    const ideas = await IdeaModel.find({
+      authorId: p.userId,
+      status: "published",
+      visibility: "public",
+      deletedAt: null,
+    })
+      .sort({ createdAt: -1 })
+      .limit(50);
     res.json({
-      profile: own ? doc(p) : await profile(p.userId),
+      profile: await profile(p.userId),
       ideas: await Promise.all(ideas.map((i) => decorate(i, req))),
-      private: p.private && !own,
     });
   });
   app.patch("/api/v1/profiles/me", async (req: AuthedRequest, res) => {

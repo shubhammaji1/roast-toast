@@ -180,7 +180,6 @@ export const profileSchema = z.object({
     z.literal(""),
     z.url().refine((v) => /^https?:\/\//i.test(v)),
   ]),
-  private: z.boolean().default(false),
 });
 export const coffeeSchema = z.object({
   amount: z.number().int().min(49).max(5000),
@@ -196,7 +195,6 @@ export type Profile = {
   bio: string;
   skills: string[];
   website: string;
-  private: boolean;
   demo: boolean;
   color: string;
   role?: string;

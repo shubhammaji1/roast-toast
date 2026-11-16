@@ -4,6 +4,7 @@ const config: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
   transpilePackages: ["@roast/domain"],
   poweredByHeader: false,
+  devIndicators: false,
   webpack(webpackConfig) {
     webpackConfig.resolve.alias["@"] = path.resolve(process.cwd(), "src");
     return webpackConfig;
