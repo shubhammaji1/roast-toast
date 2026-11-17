@@ -494,6 +494,32 @@ describe("The feedback and build loop", () => {
     expect((await reviewer.get(`/api/v1/ideas/${idea.id}`)).body.feedbackSummary)
       .toBeNull();
   });
+  it("persists a seven-day sprint and requires evidence and a decision to finish", async () => {
+    const idea = await publish();
+    const input = {
+      hypothesis: "Residents will borrow tools from neighbors.",
+      experiment: "Offer a manual lending trial to ten households.",
+      successCriteria: "Five completed loans.",
+      sprint: { targetCustomer: "Apartment residents", deadline: "2000-01-01" },
+    };
+    expect((await reviewer.post(`/api/v1/ideas/${idea.id}/experiments`).send(input)).status).toBe(403);
+    expect((await creator.post(`/api/v1/ideas/${idea.id}/experiments`).send({ ...input, sprint: { targetCustomer: "" } })).status).toBe(400);
+    const plan = await creator.post(`/api/v1/ideas/${idea.id}/experiments`).send(input);
+    expect(plan.status).toBe(201);
+    expect(Date.parse(plan.body.sprint.deadline) - Date.parse(plan.body.sprint.startedAt)).toBe(7 * 24 * 60 * 60 * 1000);
+    const endpoint = `/api/v1/experiments/${plan.body.id}`;
+    expect((await creator.patch(endpoint).send({ status: "Complete" })).status).toBe(400);
+    expect((await creator.patch(endpoint).send({ status: "Inconclusive", outcome: "Nobody replied." })).status).toBe(400);
+    expect((await reviewer.patch(endpoint).send({ status: "Complete", outcome: "Five loans.", decision: "Build" })).status).toBe(403);
+    expect((await creator.patch(endpoint).send({ status: "In progress", outcome: "Two households joined." })).status).toBe(200);
+    const finished = await creator.patch(endpoint).send({ status: "Complete", outcome: "Six households completed loans.", decision: "Build" });
+    expect(finished.status).toBe(200);
+    const detail = await creator.get(`/api/v1/ideas/${idea.id}`);
+    expect(detail.body.milestones.find((m: { id: string }) => m.id === plan.body.id)).toMatchObject({
+      status: "Complete", decision: "Build", outcome: "Six households completed loans.",
+      sprint: { targetCustomer: "Apartment residents", deadline: plan.body.sprint.deadline },
+    });
+  });
   it("filters search and categories, and paginates without duplicates", async () => {
     const unique = await publish(creator, {
       title: "Searchable unique pantry exchange",

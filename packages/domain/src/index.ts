@@ -1,7 +1,13 @@
 import { z } from "zod";
 
 import { stages, tones } from "@roast/domain/presentation";
-export { categories, stages, tones, initials, money } from "@roast/domain/presentation";
+export {
+  categories,
+  stages,
+  tones,
+  initials,
+  money,
+} from "@roast/domain/presentation";
 const reservedCoffeePaths = new Set([
   "signup",
   "login",
@@ -145,10 +151,16 @@ export const experimentSchema = z.object({
   hypothesis: z.string().trim().min(8).max(240),
   experiment: z.string().trim().min(12).max(1500),
   successCriteria: z.string().trim().min(5).max(300),
+  sprint: z
+    .object({
+      targetCustomer: z.string().trim().min(5).max(500),
+    })
+    .optional(),
 });
 export const experimentProgressSchema = z.object({
   status: z.enum(["Planned", "In progress", "Complete", "Inconclusive"]),
   outcome: z.string().trim().max(1000).optional(),
+  decision: z.enum(["Build", "Change", "Stop", "Test again"]).optional(),
 });
 export const profileSchema = z.object({
   name: z.string().trim().min(2).max(60),
@@ -234,6 +246,8 @@ export type Milestone = {
   successCriteria?: string;
   status?: "Planned" | "In progress" | "Complete" | "Inconclusive";
   outcome?: string;
+  sprint?: { targetCustomer: string; startedAt: string; deadline: string };
+  decision?: "Build" | "Change" | "Stop" | "Test again";
 };
 export type FeedbackSummary = {
   roastCount: number;

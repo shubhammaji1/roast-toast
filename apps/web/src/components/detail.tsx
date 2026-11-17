@@ -42,6 +42,7 @@ import {
 } from "./ui";
 import { useApp } from "./providers";
 import { CoffeeLink, CoffeeSupport } from "./coffee";
+import { SprintStart } from "./sprint-start";
 import { useIdeaReaction } from "@/lib/use-idea-reaction";
 
 const detailTabs = [
@@ -151,6 +152,17 @@ export function IdeaDetail({ id }: { id: string }) {
           </button>
         </div>
       </div>
+      {owner && (
+        <section className="experiment-card sprint-entry" aria-label="Seven-day validation sprint">
+          <div><span className="eyebrow">FROM IDEA TO EVIDENCE</span>
+          <h2>What can you learn in seven days?</h2>
+          <p>Test one assumption, record what happened, and choose your next move.</p></div>
+          <SprintStart idea={idea} onStarted={() => {
+            refresh(); toast("Your seven-day sprint has started.");
+            router.push(`/ideas/${id}?tab=journey`, { scroll: false });
+          }} />
+        </section>
+      )}
       <header className="detail-header">
         <div className="detail-labels">
           <span className="category-label">{idea.category}</span>
@@ -518,28 +530,39 @@ export function IdeaDetail({ id }: { id: string }) {
                       .map((experiment) => (
                         <article className="experiment-card" key={experiment.id}>
                           <div className="suggestion-labels">
-                            <span className="eyebrow">ASSUMPTION</span>
+                            <span className="eyebrow">{experiment.sprint ? "SEVEN-DAY SPRINT" : "ASSUMPTION"}</span>
                             <span className="stage progress">{experiment.status || "Planned"}</span>
                           </div>
                           <h4>{experiment.hypothesis || experiment.title}</h4>
+                          {experiment.sprint && <>
+                            <p><strong>Target customer:</strong> {experiment.sprint.targetCustomer}</p>
+                            <p><strong>Deadline:</strong> {date(experiment.sprint.deadline)}
+                              {!["Complete", "Inconclusive"].includes(experiment.status || "") && Date.now() > Date.parse(experiment.sprint.deadline) && " — Time to record your result"}
+                            </p>
+                            <p className="fine-print">Days 1–2: seek feedback · Days 3–6: run your test · Day 7: decide</p>
+                          </>}
                           <p><strong>Test:</strong> {experiment.body}</p>
                           <p><strong>Success looks like:</strong> {experiment.successCriteria}</p>
                           {experiment.outcome && (
                             <p className="experiment-outcome"><strong>What happened:</strong> {experiment.outcome}</p>
                           )}
+                          {experiment.decision && <p><strong>Decision:</strong> {experiment.decision}</p>}
                           {owner && (
                             <form
                               className="experiment-progress"
                               onSubmit={async (event) => {
                                 event.preventDefault();
                                 const values = Object.fromEntries(new FormData(event.currentTarget));
+                                if (busy) return;
+                                setBusy(true);
+                                if (!values.decision) delete values.decision;
                                 try {
                                   await send(`/experiments/${experiment.id}`, values, "PATCH");
                                   refresh();
                                   toast("Experiment progress saved.");
                                 } catch (error) {
                                   toast((error as Error).message);
-                                }
+                                } finally { setBusy(false); }
                               }}
                             >
                               <label>
@@ -554,7 +577,14 @@ export function IdeaDetail({ id }: { id: string }) {
                                 Result or learning
                                 <textarea name="outcome" rows={2} maxLength={1000} defaultValue={experiment.outcome || ""} />
                               </label>
-                              <button className="button secondary">Save progress</button>
+                              {experiment.sprint && <label>
+                                Your next decision (required to finish)
+                                <select name="decision" defaultValue={experiment.decision || ""}>
+                                  <option value="">Choose after reviewing your evidence</option>
+                                  {["Build", "Change", "Stop", "Test again"].map((decision) => <option key={decision}>{decision}</option>)}
+                                </select>
+                              </label>}
+                              <button className="button secondary" disabled={busy}>{busy ? "Saving…" : "Save progress"}</button>
                             </form>
                           )}
                         </article>

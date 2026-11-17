@@ -12,6 +12,8 @@ Requires Node.js 22.17+, npm, and an existing Supabase project.
 4. Run `npm run db:migrate` to apply the schema in [supabase/migrations](supabase/migrations/202611060001_community.sql).
 5. Run `npm run dev` and open http://localhost:3000. The Express API listens on port 4000.
 
+For local development, set `APP_ORIGIN=http://localhost:3000` and `API_INTERNAL_URL=http://127.0.0.1:4000` in `.env`. Deployment URLs belong in the hosting environment; using them locally sends browser requests to the deployed API, which rejects the localhost origin. Restart `npm run dev` after changing these settings.
+
 On Windows, `npm.cmd` works when PowerShell restricts `npm.ps1`. Scripts invoke binaries through Node so the ampersand in this workspace path is supported. Temporary files and npm caches stay on the workspace drive.
 
 Demo records are opt-in: set `SEED_DEMO=1` only for a disposable development database. Normal startup leaves your data unchanged. To remove existing sample ideas safely, run `npm run db:demo:plan`, review its linked-row counts, then apply the reviewed plan with `npm run db:demo:clean`. See [demo cleanup](docs/DEPLOYMENT.md#demo-data-cleanup). Production never seeds sample posts.
@@ -28,6 +30,7 @@ The canonical API is `/api/v1`: create posts with `POST /api/v1/ideas`, then rea
 
 - Publish, save drafts, revise, archive, and delete ideas; public/unlisted visibility; optimistic version checks and revision history.
 - Plan low-cost validation experiments with success criteria, track outcomes, and review a private creator-only synthesis of feedback signals.
+- Start a seven-day sprint from your own idea page: define a target customer, risky assumption, small test, and measurable success criteria. The server sets a seven-day deadline; track progress in Build journey and record evidence plus a Build, Change, Stop, or Test again decision to finish. Sprints share the idea's visibility and do not book reviewers or send deadline reminders.
 - Structured roasts and replies, helpful reactions, creator acknowledgments, suggestions, milestone updates, collaborations, and notifications.
 - Search, categories, latest/trending/building feeds, cursor pagination, saved ideas, and follows.
 - Private draft images, validated image uploads, public profiles, mutual blocks, reports, suspensions/appeals, and audited moderation.

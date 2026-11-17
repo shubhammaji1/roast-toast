@@ -935,12 +935,18 @@ export async function createApp(auth: Auth) {
       const p = member(req);
       const idea = await loadIdea(req, req.params.id, true);
       const input = experimentSchema.parse(req.body);
+      const startedAt = new Date();
       const experiment = await MilestoneModel.create({
         kind: "experiment",
         title: input.hypothesis,
         body: input.experiment,
         hypothesis: input.hypothesis,
         successCriteria: input.successCriteria,
+        ...(input.sprint ? { sprint: {
+          targetCustomer: input.sprint.targetCustomer,
+          startedAt: startedAt.toISOString(),
+          deadline: new Date(startedAt.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        } } : {}),
         status: "Planned",
         outcome: "",
         stage: idea.stage,
@@ -959,8 +965,13 @@ export async function createApp(auth: Auth) {
         return fail(404, "Experiment not found.");
       await loadIdea(req, experiment.ideaId, true);
       const input = experimentProgressSchema.parse(req.body);
+      if (experiment.sprint && ["Complete", "Inconclusive"].includes(input.status) &&
+          (!(input.outcome ?? experiment.outcome)?.trim() || !(input.decision ?? experiment.decision))) {
+        return fail(400, "Record your evidence and choose a decision before finishing your sprint.");
+      }
       experiment.status = input.status;
       if (input.outcome !== undefined) experiment.outcome = input.outcome;
+      if (input.decision !== undefined) experiment.decision = input.decision;
       await experiment.save();
       res.json(doc(experiment));
     },
