@@ -20,7 +20,8 @@ import {
   type CommunityConfig,
   defaultCommunityConfig,
 } from "@roast/domain";
-import { api, authClient, date, send } from "@/lib/api";
+import { api, date, send } from "@/lib/api";
+import { authClient } from "@/lib/auth-client";
 import { useApp } from "./providers";
 import { Avatar, Empty, ErrorState, Loading, Modal } from "./ui";
 import { IdeaCard } from "./idea-card";

@@ -1,3 +1,8 @@
+import type { Metadata } from "next";
+export const metadata: Metadata = {
+  title: "About",
+  alternates: { canonical: "/about" },
+};
 import Link from "next/link";
 
 export default function Page() {

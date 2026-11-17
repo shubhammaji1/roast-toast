@@ -12,7 +12,8 @@ import {
   Plus,
   Check,
 } from "lucide-react";
-import { categories, type Idea, type Detail } from "@roast/domain";
+import type { Idea, Detail } from "@roast/domain";
+import { categories } from "@roast/domain/presentation";
 import { api } from "../lib/api";
 import { useApp } from "./providers";
 import {
@@ -35,8 +36,9 @@ const tabs = [
   { key: "building", name: "Being built" },
 ];
 function useFeaturedIdea() {
-  const { me } = useApp();
+  const { me, loading } = useApp();
   return useQuery({
+    enabled: !loading,
     queryKey: ["ideas", "featured", me?.user?.id],
     queryFn: async ({ signal }) => {
       const { ideas } = await api<{ ideas: Idea[] }>("/ideas?limit=1", {
@@ -47,8 +49,9 @@ function useFeaturedIdea() {
   });
 }
 function useBuildingIdeas() {
-  const { me } = useApp();
+  const { me, loading } = useApp();
   return useQuery({
+    enabled: !loading,
     queryKey: ["ideas", "building-preview", me?.user?.id],
     queryFn: ({ signal }) =>
       api<{ ideas: Idea[] }>("/ideas?tab=building&limit=3", { signal }),
@@ -283,10 +286,10 @@ export function Feed({
 }) {
   const [tab, setTab] = useState(mode === "explore" ? "for-you" : mode);
   const [category, setCategory] = useState("All ideas");
-  const [query, setQuery] = useState(initialQuery);
+  const [query, setQuery] = useState(initialQuery.slice(0, 100));
   const [filtersOpen, setFiltersOpen] = useState(false);
   const deferredQuery = useDeferredValue(query);
-  const { me, guard } = useApp();
+  const { me, guard, loading } = useApp();
   const router = useRouter();
   const privateView = ["saved", "mine", "following"].includes(mode);
   const authorized = !privateView || Boolean(me?.user);
@@ -298,7 +301,7 @@ export function Feed({
         `/ideas?${new URLSearchParams({ tab, category, q: deferredQuery, ...(pageParam ? { cursor: pageParam } : {}) })}`,
       ),
     getNextPageParam: (page) => page.nextCursor,
-    enabled: authorized,
+    enabled: authorized && !loading,
   });
   const ideas = result.data?.pages.flatMap((page) => page.ideas) || [];
   const Heading = landing ? "h2" : "h1";
@@ -310,7 +313,7 @@ export function Feed({
         : mode === "building"
           ? "Less talking. More making."
           : initialQuery
-            ? `Let’s find “${initialQuery}”.`
+            ? `Let’s find “${query}”.`
             : "Ideas on the table.";
   return (
     <section className="feed-section">
@@ -382,10 +385,15 @@ export function Feed({
                   Search ideas
                   <input
                     type="search"
+                    maxLength={100}
+                    aria-describedby="search-limit"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder="A problem, a topic, a tiny obsession…"
                   />
+                  <span id="search-limit">
+                    Search using 100 characters or fewer.
+                  </span>
                 </label>
               )}
             </>

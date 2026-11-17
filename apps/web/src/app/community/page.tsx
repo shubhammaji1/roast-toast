@@ -1,3 +1,8 @@
+import type { Metadata } from "next";
+export const metadata: Metadata = {
+  title: "Community guidelines",
+  alternates: { canonical: "/community" },
+};
 import Link from "next/link";
 export default function Page() {
   return (

@@ -1,3 +1,8 @@
+import type { Metadata } from "next";
+export const metadata: Metadata = {
+  title: "Privacy",
+  alternates: { canonical: "/privacy" },
+};
 export default function Page() {
   return (
     <article className="legal-page">

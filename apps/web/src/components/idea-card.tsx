@@ -43,7 +43,7 @@ export function IdeaCard({
         <div className="creator">
           <Avatar person={idea.author} small />
           <div>
-            <Link href={`/people/${idea.author.username}`}>
+            <Link prefetch={false} href={`/people/${idea.author.username}`}>
               {idea.author.name}
             </Link>
             <span>
@@ -64,13 +64,19 @@ export function IdeaCard({
         <div>
           <span className="category-label">{idea.category}</span>
           <h2>
-            <Link href={`/ideas/${idea.id}`}>{idea.title}</Link>
+            <Link prefetch={false} href={`/ideas/${idea.id}`}>
+              {idea.title}
+            </Link>
           </h2>
           <p>{idea.pitch}</p>
           {!compact && (
             <div className="post-tags">
               {idea.tags.map((tag) => (
-                <Link href={`/explore?q=${encodeURIComponent(tag)}`} key={tag}>
+                <Link
+                  prefetch={false}
+                  href={`/explore?q=${encodeURIComponent(tag)}`}
+                  key={tag}
+                >
                   #{tag.toLowerCase().replace(/\s+/g, "")}
                 </Link>
               ))}
@@ -78,7 +84,11 @@ export function IdeaCard({
           )}
         </div>
         {(idea.cover || idea.coverImage) && !compact && (
-          <Link href={`/ideas/${idea.id}`} className="cover-link">
+          <Link
+            prefetch={false}
+            href={`/ideas/${idea.id}`}
+            className="cover-link"
+          >
             <span className="sr-only">Read {idea.title}</span>
             <Cover kind={idea.cover} mediaId={idea.coverImage} />
           </Link>
@@ -111,6 +121,7 @@ export function IdeaCard({
         </button>
         <CoffeeLink idea={idea} className="coffee-action" compact />
         <Link
+          prefetch={false}
           href={`/ideas/${idea.id}?tab=roasts`}
           className="comments-action"
           aria-label={`Read ${idea.roastCount} roasts`}
@@ -133,7 +144,11 @@ export function IdeaCard({
         </button>
       </footer>
       {idea.status !== "published" && (
-        <Link className="draft-strip" href={`/ideas/${idea.id}/edit`}>
+        <Link
+          prefetch={false}
+          className="draft-strip"
+          href={`/ideas/${idea.id}/edit`}
+        >
           {idea.status === "draft"
             ? "Draft · Only you can see this"
             : "Archived · Hidden from the table"}

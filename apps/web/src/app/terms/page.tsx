@@ -1,3 +1,8 @@
+import type { Metadata } from "next";
+export const metadata: Metadata = {
+  title: "Terms",
+  alternates: { canonical: "/terms" },
+};
 export default function Page() {
   return (
     <article className="legal-page">
@@ -36,10 +41,11 @@ export default function Page() {
       </p>
       <h2>About coffee</h2>
       <p>
-        Coffee buttons open a creator’s external Buy Me a Coffee page. Payments,
-        receipts, refunds, and any provider account requirements are handled
-        there. Roast & Toast does not collect payment details or verify
-        donations.
+        Coffee buttons on ideas open that idea’s creator’s external Buy Me a
+        Coffee page. The site-wide “Buy me a coffee” link supports the Roast &
+        Toast operator. Payments, receipts, refunds, and any provider account
+        requirements are handled by Buy Me a Coffee. Roast & Toast does not
+        collect payment details or take a share of creator support.
       </p>
       <h2>A development service</h2>
       <p>

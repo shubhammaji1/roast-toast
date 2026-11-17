@@ -1,5 +1,7 @@
 # Deployment
 
+See [release readiness](RELEASE-READINESS.md) for the open operator/policy decisions, secure-cookie migration checks and canonical `SITE_URL` configuration.
+
 The runtime database is Supabase PostgreSQL. No MongoDB service or fallback is used.
 
 ## Database setup

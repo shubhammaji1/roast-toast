@@ -186,6 +186,9 @@ svg {
   min-height: 36px;
   padding: 8px 12px;
 }
+.topbar-support {
+  white-space: nowrap;
+}
 .button.full,
 .full {
   width: 100%;
@@ -626,7 +629,7 @@ svg {
   margin-top: 22px;
   padding: 0 15px;
   border-radius: 3px;
-  background: #e26442;
+  background: #b83b22;
   color: #fffaf1;
   font-size: 10px;
   font-weight: 600;
@@ -635,7 +638,7 @@ svg {
     transform 180ms ease;
 }
 .footer-cta:hover {
-  background: #f07854;
+  background: #9f301c;
   color: #fffaf1;
   transform: translateY(-2px);
 }
@@ -3450,6 +3453,12 @@ textarea[aria-invalid="true"] {
   }
   .topbar-title span {
     font-size: 6px;
+  }
+  .topbar-support {
+    padding: 8px;
+  }
+  .topbar-support > span {
+    display: none;
   }
   .hero {
     grid-template-columns: 1.05fr 1fr;

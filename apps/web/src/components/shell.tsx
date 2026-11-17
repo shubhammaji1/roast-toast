@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Flame,
+  Coffee,
 } from "lucide-react";
 import { useState } from "react";
 import { useApp } from "./providers";
@@ -65,6 +66,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <nav aria-label="Main navigation">
             {nav.map(({ href, label, icon: Icon }) => (
               <Link
+                prefetch={false}
                 className={`nav-item ${path === href || (href === "/feed" && path === "/") ? "active" : ""}`}
                 key={href}
                 href={href}
@@ -82,6 +84,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             ))}
             {me?.profile?.role === "admin" && (
               <Link
+                prefetch={false}
                 className={`nav-item ${path === "/admin" ? "active" : ""}`}
                 href="/admin"
                 aria-label="Moderation"
@@ -94,7 +97,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
             )}
           </nav>
           <div className="sidebar-bottom">
-            <Link href="/community" title="Community guidelines">
+            <Link
+              prefetch={false}
+              href="/community"
+              title="Community guidelines"
+            >
               <span>Table manners</span>
             </Link>
           </div>
@@ -102,7 +109,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </aside>
       <div className="main-shell">
         <header className="topbar">
-          <Link href="/" className="topbar-title">
+          <Link prefetch={false} href="/" className="topbar-title">
             The idea café<span>OPEN MINDS. OPEN TABLE.</span>
           </Link>
           <form
@@ -116,6 +123,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <Search size={17} />
             <input
               aria-label="Search ideas"
+              maxLength={100}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Find your next rabbit hole…"
@@ -123,7 +131,19 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <kbd>↵</kbd>
           </form>
           <div className="topbar-account">
+            <a
+              className="button coffee-button small-button topbar-support"
+              href="https://buymeacoffee.com/BeyondTheSyntax"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Support Roast & Toast on Buy Me a Coffee (opens in a new tab)"
+              title="Support Roast & Toast"
+            >
+              <Coffee size={15} />
+              <span>Buy me a coffee</span>
+            </a>
             <Link
+              prefetch={false}
               className="notification-button icon-button"
               href="/notifications"
               aria-label="Notifications"
@@ -157,7 +177,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 that needs <em>a little heat?</em>
               </h2>
               <p>Bring the rough draft. Leave with a next step.</p>
-              <Link className="footer-cta" href="/new">
+              <Link prefetch={false} className="footer-cta" href="/new">
                 Pitch an idea
                 <ArrowUpRight size={16} />
               </Link>
@@ -165,22 +185,45 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </div>
             <div className="footer-receipt">
               <div className="footer-brand">
-                <Link href="/" aria-label="Roast and Toast home">
-                  roast <span>&</span> toast<span className="footer-period">.</span>
+                <Link
+                  prefetch={false}
+                  href="/"
+                  aria-label="roast & toast. home"
+                >
+                  roast <span>&</span> toast
+                  <span className="footer-period">.</span>
                 </Link>
                 <p>Made for ideas with a little potential.</p>
               </div>
-              <nav className="footer-links" aria-label="Explore Roast and Toast">
+              <nav
+                className="footer-links"
+                aria-label="Explore Roast and Toast"
+              >
                 <span>TAKE A SEAT</span>
-                <Link href="/feed">The table</Link>
-                <Link href="/explore">Explore ideas</Link>
-                <Link href="/new">Pitch an idea</Link>
+                <Link prefetch={false} href="/feed">
+                  The table
+                </Link>
+                <Link prefetch={false} href="/explore">
+                  Explore ideas
+                </Link>
+                <Link prefetch={false} href="/new">
+                  Pitch an idea
+                </Link>
               </nav>
-              <nav className="footer-links" aria-label="Community and information">
+              <nav
+                className="footer-links"
+                aria-label="Community and information"
+              >
                 <span>HOUSE NOTES</span>
-                <Link href="/community">Table manners</Link>
-                <Link href="/privacy">Privacy</Link>
-                <Link href="/terms">Terms</Link>
+                <Link prefetch={false} href="/community">
+                  Table manners
+                </Link>
+                <Link prefetch={false} href="/privacy">
+                  Privacy
+                </Link>
+                <Link prefetch={false} href="/terms">
+                  Terms
+                </Link>
               </nav>
               <span className="footer-stamp" aria-hidden="true">
                 MADE OF
@@ -196,6 +239,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </div>
       <nav className="mobile-nav" aria-label="Mobile navigation">
         <Link
+          prefetch={false}
           href="/feed"
           aria-current={path === "/feed" || path === "/" ? "page" : undefined}
         >
@@ -203,6 +247,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <span>The table</span>
         </Link>
         <Link
+          prefetch={false}
           href="/explore"
           aria-current={path === "/explore" ? "page" : undefined}
         >
@@ -217,6 +262,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <Plus size={25} />
         </button>
         <Link
+          prefetch={false}
           href="/saved"
           aria-current={path === "/saved" ? "page" : undefined}
         >
@@ -224,6 +270,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <span>Bookmarks</span>
         </Link>
         <Link
+          prefetch={false}
           href="/about"
           aria-current={path === "/about" ? "page" : undefined}
         >

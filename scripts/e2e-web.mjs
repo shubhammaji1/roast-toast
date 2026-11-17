@@ -7,6 +7,7 @@ const project = resolve(".data/e2e-web");
 await mkdir(project, { recursive: true });
 for (const name of [
   "src",
+  "public",
   "package.json",
   "tsconfig.json",
   "next-env.d.ts",

@@ -1,10 +1,6 @@
-import { createAuthClient } from "better-auth/react";
 import type { Profile } from "@roast/domain";
 
 export const API_BASE_PATH = "/api/v1";
-export const authClient = createAuthClient({
-  basePath: `${API_BASE_PATH}/auth`,
-});
 export type Me = {
   user: {
     id: string;

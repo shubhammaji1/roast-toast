@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { Check, ArrowRight } from "lucide-react";
-import { api, authClient, type Me } from "@/lib/api";
+import { api, type Me } from "@/lib/api";
 import { Modal } from "./ui";
 
 type Context = {
@@ -122,6 +122,7 @@ function ModeratorSignIn({
           setError("");
           const data = new FormData(event.currentTarget);
           try {
+            const { authClient } = await import("@/lib/auth-client");
             const result = await authClient.signIn.email({
               email: String(data.get("email")),
               password: String(data.get("password")),

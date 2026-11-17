@@ -63,8 +63,11 @@ test("a visitor can explore, filter, and use the mobile table", async ({
   ).toHaveAttribute("href", "/about");
   expect((await mobileNav.boundingBox())?.height).toBe(60);
   expect(
-    (await mobileNav.getByRole("button", { name: "Pitch an idea" }).boundingBox())
-      ?.width,
+    (
+      await mobileNav
+        .getByRole("button", { name: "Pitch an idea" })
+        .boundingBox()
+    )?.width,
   ).toBe(44);
   const navBounds = await mobileNav.boundingBox();
   const createBounds = await mobileNav
@@ -76,19 +79,19 @@ test("a visitor can explore, filter, and use the mobile table", async ({
     Math.abs(navBounds.y - (createBounds.y + createBounds.height / 2)),
   ).toBeLessThanOrEqual(1);
   const centers = await mobileNav.evaluate((nav) => {
-    const navCenter = nav.getBoundingClientRect().left +
-      nav.getBoundingClientRect().width / 2;
+    const navCenter =
+      nav.getBoundingClientRect().left + nav.getBoundingClientRect().width / 2;
     const create = nav.querySelector(".mobile-create");
     if (!create) throw new Error("Mobile create button is missing");
     const button = create.getBoundingClientRect();
     return { navCenter, buttonCenter: button.left + button.width / 2 };
   });
-  expect(Math.abs(centers.navCenter - centers.buttonCenter)).toBeLessThanOrEqual(
-    1,
-  );
   expect(
-    await page.evaluate(() => document.documentElement.scrollWidth),
-  ).toBeLessThanOrEqual(390);
+    Math.abs(centers.navCenter - centers.buttonCenter),
+  ).toBeLessThanOrEqual(1);
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+    .toBeLessThanOrEqual(390);
   await page
     .getByRole("navigation", { name: "Mobile navigation" })
     .getByRole("link", { name: "Bookmarks", exact: true })

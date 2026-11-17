@@ -1,3 +1,8 @@
+import type { Metadata } from "next";
+export const metadata: Metadata = {
+  title: "Explore ideas",
+  alternates: { canonical: "/explore" },
+};
 import { Feed } from "@/components/feed";
 export default async function Page({
   searchParams,

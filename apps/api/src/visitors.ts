@@ -6,21 +6,33 @@ import { ProfileModel, VisitorSession } from "./models.js";
 export const visitorCookie =
   process.env.NODE_ENV === "production" ? "__Host-rt-visitor" : "rt-visitor";
 const lifetime = 365 * 24 * 60 * 60 * 1000;
-const attributes = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "lax" as const,
-  path: "/",
-};
+function attributes() {
+  return {
+    httpOnly: true,
+    secure:
+      process.env.NODE_ENV === "production" ||
+      process.env.APP_ORIGIN?.startsWith("https://") === true,
+    sameSite: "lax" as const,
+    path: "/",
+  };
+}
 export function clearVisitor(res: Response) {
-  res.clearCookie(visitorCookie, attributes);
+  res.clearCookie(visitorCookie, attributes());
+  if (visitorCookie !== "rt-visitor")
+    res.clearCookie("rt-visitor", attributes());
 }
 export async function resolveVisitor(
   req: Request,
   res: Response,
   create: boolean,
 ) {
-  const token = req.cookies?.[visitorCookie];
+  // Upgrade a validated legacy identity without losing its posts or drafts.
+  // A present primary cookie always wins, even when invalid.
+  const legacy =
+    visitorCookie !== "rt-visitor" && !req.cookies?.[visitorCookie];
+  const token =
+    req.cookies?.[visitorCookie] ??
+    (legacy ? req.cookies?.["rt-visitor"] : undefined);
   if (typeof token === "string" && /^[a-f0-9]{64}$/.test(token)) {
     const session = await VisitorSession.findOne({
       tokenHash: createHash("sha256").update(token).digest("hex"),
@@ -31,7 +43,14 @@ export async function resolveVisitor(
         userId: session.userId,
         deletedAt: null,
       });
-      if (profile) return { profile, session };
+      if (profile) {
+        res.cookie(visitorCookie, token, {
+          ...attributes(),
+          expires: new Date(session.expiresAt),
+        });
+        if (legacy) res.clearCookie("rt-visitor", attributes());
+        return { profile, session };
+      }
     }
   }
   if (!create) return null;
@@ -68,6 +87,6 @@ export async function resolveVisitor(
     );
     return { profile, session: visitor };
   });
-  res.cookie(visitorCookie, raw, { ...attributes, maxAge: lifetime });
+  res.cookie(visitorCookie, raw, { ...attributes(), maxAge: lifetime });
   return result;
 }

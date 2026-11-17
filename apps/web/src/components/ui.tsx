@@ -1,10 +1,11 @@
 "use client";
-import * as Dialog from "@radix-ui/react-dialog";
-import { X, ArrowUpRight, Coffee } from "lucide-react";
-import { initials, type Profile } from "@roast/domain";
+import dynamic from "next/dynamic";
+import { ArrowUpRight, Coffee } from "lucide-react";
+import type { Profile } from "@roast/domain";
+import { initials } from "@roast/domain/presentation";
 import Link from "next/link";
 import Image from "next/image";
-import { useRef } from "react";
+import { useState, useEffect } from "react";
 
 export function BrandMark({ className = "" }: { className?: string }) {
   return (
@@ -67,62 +68,14 @@ export function Avatar({
     content
   );
 }
-export function Modal({
-  open,
-  onOpenChange,
-  title,
-  description,
-  children,
-  wide = false,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  title: string;
-  description: string;
-  children: React.ReactNode;
-  wide?: boolean;
-}) {
-  const content = useRef<HTMLDivElement>(null);
-  const returnFocus = useRef<HTMLElement | null>(null);
-  return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="dialog-overlay" />
-        <Dialog.Content
-          ref={content}
-          className={`dialog ${wide ? "wide" : ""}`}
-          onOpenAutoFocus={(event) => {
-            returnFocus.current =
-              document.activeElement instanceof HTMLElement
-                ? document.activeElement
-                : null;
-            const field = content.current?.querySelector<HTMLElement>(
-              'input:not([type="checkbox"]), textarea, select',
-            );
-            if (field) {
-              event.preventDefault();
-              field.focus();
-            }
-          }}
-          onCloseAutoFocus={(event) => {
-            if (returnFocus.current?.isConnected) {
-              event.preventDefault();
-              returnFocus.current.focus();
-            }
-          }}
-        >
-          <Dialog.Close className="icon-button close" aria-label="Close dialog">
-            <X size={21} />
-          </Dialog.Close>
-          <Dialog.Title className="dialog-title">{title}</Dialog.Title>
-          <Dialog.Description className="muted dialog-description">
-            {description}
-          </Dialog.Description>
-          {children}
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
-  );
+const DialogModal = dynamic(() => import("./dialog-modal"));
+export function Modal(props: React.ComponentProps<typeof DialogModal>) {
+  const [opened, setOpened] = useState(false);
+  useEffect(() => {
+    if (props.open) setOpened(true);
+  }, [props.open]);
+  // Keep the dialog mounted after first use so closing restores focus.
+  return opened || props.open ? <DialogModal {...props} /> : null;
 }
 export function Empty({
   title = "Nothing here yet.",

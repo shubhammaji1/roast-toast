@@ -5,6 +5,9 @@ const config: NextConfig = {
   transpilePackages: ["@roast/domain"],
   poweredByHeader: false,
   devIndicators: false,
+  // The shared sheet is ~16 KB compressed. Inline it for a faster first paint
+  // on slow connections; validate production navigation when upgrading Next.
+  experimental: { inlineCss: true },
   webpack(webpackConfig) {
     webpackConfig.resolve.alias["@"] = path.resolve(process.cwd(), "src");
     return webpackConfig;
@@ -19,6 +22,10 @@ const config: NextConfig = {
   },
   async headers() {
     return [
+      {
+        source: "/fonts/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
       {
         source: "/:path*",
         headers: [

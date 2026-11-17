@@ -10,7 +10,11 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
 
-const mocks = vi.hoisted(() => ({ api: vi.fn(), push: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  api: vi.fn(),
+  push: vi.fn(),
+  loading: false,
+}));
 vi.mock("../apps/web/src/lib/api", () => ({ api: mocks.api }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push }) }));
 vi.mock("next/link", () => ({
@@ -18,7 +22,11 @@ vi.mock("next/link", () => ({
     createElement("a", props, children),
 }));
 vi.mock("../apps/web/src/components/providers", () => ({
-  useApp: () => ({ me: null, guard: (action: () => void) => action() }),
+  useApp: () => ({
+    me: null,
+    loading: mocks.loading,
+    guard: (action: () => void) => action(),
+  }),
 }));
 vi.mock("../apps/web/src/components/idea-card", () => ({
   IdeaCard: () => null,
@@ -46,7 +54,7 @@ vi.mock("../apps/web/src/components/ui", () => ({
     createElement("a", { href }, children),
   Stage: ({ stage }: { stage: string }) => createElement("span", {}, stage),
 }));
-import { Landing } from "../apps/web/src/components/feed";
+import { Feed, Landing } from "../apps/web/src/components/feed";
 
 const idea = {
   id: "abcdefabcdefabcdefabcdef",
@@ -71,6 +79,7 @@ const detail = {
 let client: QueryClient;
 beforeEach(() => {
   mocks.api.mockReset();
+  mocks.loading = false;
   client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   });
@@ -84,6 +93,41 @@ function showLanding() {
     createElement(QueryClientProvider, { client }, createElement(Landing)),
   );
 }
+it("waits for browser identity before starting public feed requests", async () => {
+  mocks.loading = true;
+  mocks.api.mockResolvedValue({ ideas: [], nextCursor: null });
+  const view = showLanding();
+  expect(mocks.api).not.toHaveBeenCalled();
+  mocks.loading = false;
+  view.rerender(
+    createElement(QueryClientProvider, { client }, createElement(Landing)),
+  );
+  await waitFor(() => expect(mocks.api).toHaveBeenCalled());
+  expect(
+    mocks.api.mock.calls.filter(([path]) => path === "/ideas?limit=1"),
+  ).toHaveLength(1);
+});
+it("bounds an overlong deep-link search before requesting the API", async () => {
+  mocks.api.mockResolvedValue({ ideas: [], nextCursor: null });
+  render(
+    createElement(
+      QueryClientProvider,
+      { client },
+      createElement(Feed, { mode: "explore", initialQuery: "x".repeat(500) }),
+    ),
+  );
+  const input = screen.getByRole("searchbox") as HTMLInputElement;
+  expect(input.value).toHaveLength(100);
+  expect(input.maxLength).toBe(100);
+  await waitFor(() => expect(mocks.api).toHaveBeenCalled());
+  for (const [path] of mocks.api.mock.calls) {
+    const query = new URL(
+      String(path),
+      "https://example.test",
+    ).searchParams.get("q");
+    if (query !== null) expect(query.length).toBeLessThanOrEqual(100);
+  }
+});
 function serveIdeas(path: string) {
   if (path === "/ideas?limit=1") return Promise.resolve({ ideas: [idea] });
   if (path === `/ideas/${idea.id}`) return Promise.resolve(detail);
