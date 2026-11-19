@@ -226,9 +226,10 @@ export function ProfilePage({ username }: { username?: string }) {
             <p className="muted">
               {me?.user?.anonymous
                 ? "Your posts and saved ideas belong to this browser. Keep its cookies to manage them later."
-                : `Moderator: ${me?.user?.email}`}
+                : `Account: ${me?.user?.email}`}
             </p>
             <div className="settings-actions">
+              <Link className="button secondary" href="/account">{me?.user?.anonymous ? "Save my workspace" : "Account and reminders"}</Link>
               <a
                 className="button secondary"
                 href="/api/v1/my-data"
@@ -237,7 +238,7 @@ export function ProfilePage({ username }: { username?: string }) {
                 <Download size={16} />
                 Export your data
               </a>
-              {!me?.user?.anonymous && (
+              {!me?.user?.anonymous && me?.authProvider !== "clerk" && (
                 <button
                   className="button secondary"
                   onClick={async () => {
@@ -255,7 +256,7 @@ export function ProfilePage({ username }: { username?: string }) {
                 Creator support
               </Link>
             </div>
-            {!me?.user?.anonymous && !me?.user?.emailVerified && (
+            {!me?.user?.anonymous && me?.authProvider !== "clerk" && !me?.user?.emailVerified && (
               <button
                 className="text-link"
                 onClick={async () => {
@@ -463,7 +464,7 @@ export function ProfilePage({ username }: { username?: string }) {
                 },
                 "DELETE",
               );
-              if (!me?.user?.anonymous) await authClient.signOut();
+              if (!me?.user?.anonymous && me?.authProvider !== "clerk") await authClient.signOut();
               window.location.assign("/");
             } catch (err) {
               setError((err as Error).message);
@@ -686,7 +687,7 @@ export function ResetPassword() {
       <h1 className="page-title">A fresh start.</h1>
       {done ? (
         <p className="success-note">
-          Password changed. You can now sign in with your new password.
+          Password changed. <Link href="/account">Sign in with your new password.</Link>
         </p>
       ) : (
         <form
@@ -697,6 +698,7 @@ export function ResetPassword() {
             setError("");
             const token =
               new URLSearchParams(window.location.search).get("token") || "";
+            try {
             const result = await authClient.resetPassword({
               newPassword: String(
                 new FormData(e.currentTarget).get("password"),
@@ -710,6 +712,9 @@ export function ResetPassword() {
                   "This reset link is invalid. Request a new one.",
               );
             else setDone(true);
+            } catch (error) {
+              setError((error as Error).message);
+            } finally { setBusy(false); }
           }}
         >
           <label>

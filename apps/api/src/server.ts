@@ -3,11 +3,13 @@ import { createAuth } from "./auth.js";
 import { createApp } from "./app.js";
 import { seedDemo } from "./seed.js";
 import { closeInfrastructure } from "./infrastructure.js";
+import { startSprintReminders } from "./sprint-reminders.js";
 
 const database = await connectDatabase();
 const auth = await createAuth(database.db);
 await seedDemo();
 const app = await createApp(auth);
+const stopReminders = startSprintReminders();
 const port = Number(process.env.API_PORT || 4000);
 const host = process.env.API_HOST || "127.0.0.1";
 if (!Number.isInteger(port) || port < 1 || port > 65535)
@@ -25,6 +27,7 @@ async function close() {
   }, 15000);
   deadline.unref();
   try {
+    await stopReminders();
     await new Promise<void>((done, fail) =>
       server.close((error) => (error ? fail(error) : done())),
     );

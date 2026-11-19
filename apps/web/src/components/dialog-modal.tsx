@@ -9,6 +9,7 @@ export default function DialogModal({
   description,
   children,
   wide = false,
+  auth = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -16,6 +17,7 @@ export default function DialogModal({
   description: string;
   children: React.ReactNode;
   wide?: boolean;
+  auth?: boolean;
 }) {
   const content = useRef<HTMLDivElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
@@ -25,7 +27,7 @@ export default function DialogModal({
         <Dialog.Overlay className="dialog-overlay" />
         <Dialog.Content
           ref={content}
-          className={`dialog ${wide ? "wide" : ""}`}
+          className={`dialog ${wide ? "wide" : ""} ${auth ? "auth-dialog" : ""}`}
           onOpenAutoFocus={(event) => {
             returnFocus.current =
               document.activeElement instanceof HTMLElement
@@ -49,6 +51,7 @@ export default function DialogModal({
           <Dialog.Close className="icon-button close" aria-label="Close dialog">
             <X size={21} />
           </Dialog.Close>
+          {auth && <div className="auth-brand"><span aria-hidden="true">✳</span> roast&amp;toast.</div>}
           <Dialog.Title className="dialog-title">{title}</Dialog.Title>
           <Dialog.Description className="muted dialog-description">
             {description}

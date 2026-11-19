@@ -4,6 +4,11 @@ export const metadata: Metadata = {
   alternates: { canonical: "/new" },
 };
 import { IdeaEditor } from "@/components/editor";
-export default function Page() {
-  return <IdeaEditor />;
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ auth?: string | string[] }>;
+}) {
+  const { auth } = await searchParams;
+  return <IdeaEditor authMode={auth === "signin" ? "signin" : "signup"} />;
 }

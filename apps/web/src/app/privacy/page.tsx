@@ -23,6 +23,11 @@ export default function Page() {
         stored in Supabase PostgreSQL. Browser ownership uses HTTP-only session
         cookies. Idea and roast drafts may also be stored in your browser on
         this device.
+        Optional member accounts use Clerk to manage sign-in credentials, email
+        verification and recovery. This app links your Clerk identity to your
+        workspace and uses your verified email for opted-in reminders.
+        Linking a verified account preserves your
+        workspace and revokes its old guest session.
       </p>
       <h2>Who can see what</h2>
       <p>
@@ -39,14 +44,19 @@ export default function Page() {
         your browser data from Your space. Deletion hides your ideas and roasts,
         deletes the browser session, and anonymizes your community identity.
         Audit records may remain for accountability.
+        Account holders can recover access by email and opt in or out of sprint
+        reminder emails from My account. Email addresses and reminder preferences
+        are not included in public profiles.
       </p>
       <h2>Local development</h2>
       <p>
-        Verification and password-reset emails stay in a private test inbox when
-        no email provider is configured. No live payment provider, tracking
+        Member verification and recovery emails are handled by Clerk. Moderator
+        emails and sprint reminders stay in a private development outbox when
+        SMTP is not configured. No live payment provider, tracking
         service, or AI service is enabled. Application records are stored in
-        your configured Supabase project. Clearing cookies loses editing access,
-        so export anything you need before switching browsers.
+        your configured Supabase project. Unlinked guest work depends on its
+        browser cookies. Link your workspace to a verified account before
+        switching browsers; unsaved local drafts remain on their original device.
       </p>
       <h2>Before launch</h2>
       <p>

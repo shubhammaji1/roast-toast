@@ -2,7 +2,7 @@
 
 # REST API contracts
 
-All paths below are relative to the browser's origin under **`/api/v1`**. `GET /api/v1` lists the API resources; `GET /api/v1/openapi.json` serves the machine-readable contract. Members use an automatic HTTP-only ownership cookie, without signup. Better Auth cookies are reserved for moderator accounts. Send JSON for mutations except multipart image uploads. Zod validates input. Errors use `{ "error": "Human-readable message" }` and optional `fields.fieldErrors`. GET `/visitor-session` starts a browser identity; include its cookie on private requests. Mutations also create an identity when needed. Status codes include 400 validation, 401 missing browser identity, 403 permission, 404 private/unavailable, 409 conflicting write, 410 retired payment route, 413 oversized content, 429 limits, and 503 unavailable service.
+All paths below are relative to the browser's origin under **`/api/v1`**. `GET /api/v1` lists the API resources; `GET /api/v1/openapi.json` serves the machine-readable contract. Browser ownership cookies support guest browsing and community participation. When Clerk is configured, a valid Clerk session is required to create ideas and upload images. Better Auth cookies are reserved for moderator accounts. Send JSON for mutations except multipart image uploads. Zod validates input. Errors use `{ "error": "Human-readable message" }` and optional `fields.fieldErrors`. GET `/visitor-session` starts a browser identity; include its cookie on private requests. Status codes include 400 validation, 401 missing identity or Clerk session, 403 permission, 404 private/unavailable, 409 conflicting write, 410 retired payment route, 413 oversized content, 429 limits, and 503 unavailable service.
 
 Browser cross-origin and cross-site mutation requests are rejected. Browser ownership is resolved before private routes; GET `/api/v1/visitor-session` creates an account-free cookie identity. Moderator routes require an authenticated admin. Responses are `no-store`. The API never sends passwords, auth account tokens, session cookies, or verification tokens through community endpoints. Development test inbox access is limited to the signed-in recipient and is absent in production.
 
@@ -34,12 +34,12 @@ The `/auth/*` routes below serve private moderator accounts. Public posting and 
 | Method and path             | Contract                                                                                               |
 | --------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `GET /ideas`                | `tab`, `q` (100 chars), `category`, `limit` (1–20, default 8), `cursor`; returns `{ideas,nextCursor}`  |
-| `POST /ideas`               | Idea contract below; creates a browser identity when needed; returns the new idea with its actual `id` |
+| `POST /ideas`               | Idea contract below; requires Clerk when configured; returns the new idea with its actual `id`         |
 | `GET /ideas/:id`            | Idea, roasts/replies, improvements, milestones/experiments, an empty legacy supporters list, revision summaries; creator-only feedback signal summary |
 | `PATCH /ideas/:id`          | Complete idea contract plus current integer `version`; author only; conflicts return 409               |
 | `DELETE /ideas/:id`         | Author only; soft-deletes and removes read access                                                      |
 | `POST /ideas/:id/reactions` | `{kind:"interest"                                                                                      | "bookmark" | "follow",active:boolean}`; explicit state makes repeated requests idempotent |
-| `POST /media`               | Authenticated multipart field `image`; max 2 MB; JPEG/PNG/WebP only; returns media ID                  |
+| `POST /media`               | Clerk session when configured; multipart field `image`; max 2 MB; JPEG/PNG/WebP only; returns media ID |
 | `GET /media/:id`            | Owner or image attached to accessible published idea; draft/unattached files remain private            |
 
 Feed tabs: `for-you`, `latest`, `trending`, `needs-feedback`, `building`, `saved`, `mine`, `following`. Personal tabs require a session. General discovery excludes drafts, archived, unlisted, deleted and mutually blocked authors. Saved/followed lists may include unlisted posts a member already knows. Newest feeds use `(createdAt,id)` cursors; trending uses `(interest count,id)`. Activity changes can change trending ordering between requests.

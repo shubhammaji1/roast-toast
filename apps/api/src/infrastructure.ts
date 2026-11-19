@@ -126,10 +126,10 @@ export async function deliverEmail(message: {
   to: string;
   subject: string;
   text: string;
-}) {
+}, jobId?: string) {
   if (!process.env.SMTP_URL) throw new Error("SMTP is not configured.");
   await initializeEmail();
-  if (mailQueue) await mailQueue.add("send", message);
+  if (mailQueue) await mailQueue.add("send", message, jobId ? { jobId, removeOnComplete: { age: 7 * 86400 } } : undefined);
   else
     await nodemailer
       .createTransport(process.env.SMTP_URL)

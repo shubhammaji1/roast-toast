@@ -51,6 +51,7 @@ import { installMedia } from "./media.js";
 import { Media } from "./models.js";
 import { sharedRateStore } from "./infrastructure.js";
 import { communityConfiguration } from "./configuration.js";
+import { resolveClerk, clerkConfigured, deleteClerkUser } from "./clerk-auth.js";
 
 class HttpError extends Error {
   constructor(
@@ -70,8 +71,8 @@ const id = (value: unknown) =>
 const string = (value: unknown) => (typeof value === "string" ? value : "");
 const doc = (value: any) =>
   value.toJSON ? value.toJSON() : { ...value, id: String(value._id) };
-type Session = Awaited<ReturnType<Auth["api"]["getSession"]>>;
-type AuthedRequest = Request & { member?: any; authSession?: Session };
+type Session = { user: { id: string; name: string; email: string; emailVerified: boolean }; session: { createdAt: Date } } | null;
+type AuthedRequest = Request & { member?: any; authSession?: Session; clerkUserId?: string };
 
 export async function createApp(auth: Auth) {
   const app = express();
@@ -173,7 +174,9 @@ export async function createApp(auth: Auth) {
     }),
   );
   app.use("/api/v1", async (req: AuthedRequest, res, next) => {
-    req.authSession = await auth.api.getSession({
+    const clerk = await resolveClerk(req);
+    req.clerkUserId = clerk?.clerkUserId;
+    req.authSession = clerk || await auth.api.getSession({
       headers: fromNodeHeaders(req.headers),
     });
     if (req.authSession) {
@@ -181,7 +184,9 @@ export async function createApp(auth: Auth) {
       const admins = (process.env.ADMIN_EMAILS || "")
         .split(",")
         .map((e) => e.trim().toLowerCase());
-      req.member = await ProfileModel.findOneAndUpdate(
+      req.member = await transaction(async () => {
+        await queryDatabase('SELECT pg_advisory_xact_lock(hashtext($1))', [user.id]);
+        return await ProfileModel.findOne({ accountId: user.id }) || await ProfileModel.findOneAndUpdate(
         { userId: user.id },
         {
           $setOnInsert: {
@@ -203,6 +208,10 @@ export async function createApp(auth: Auth) {
         },
         { upsert: true, returnDocument: "after" },
       );
+      });
+      if (req.clerkUserId) {
+        await ProfileModel.updateOne({ userId: req.member.userId }, { $set: { clerkUserId: req.clerkUserId } });
+      }
       if (
         admins.includes(user.email.toLowerCase()) &&
         user.emailVerified &&
@@ -236,6 +245,10 @@ export async function createApp(auth: Auth) {
       );
     return req.member;
   };
+  const requireClerk = (req: AuthedRequest) => {
+    if (clerkConfigured() && !req.clerkUserId)
+      return fail(401, "Sign in with Clerk to upload an idea or image.");
+  };
   const admin = (req: AuthedRequest) => {
     const p = member(req);
     if (p.role !== "admin")
@@ -257,6 +270,9 @@ export async function createApp(auth: Auth) {
       suspended: _suspended,
       deletedAt: _deletedAt,
       private: _private,
+      accountId: _accountId,
+      clerkUserId: _clerkUserId,
+      sprintReminders: _sprintReminders,
       ...safe
     } = p;
     return { ...safe, id: String(p._id) };
@@ -332,7 +348,7 @@ export async function createApp(auth: Auth) {
     },
   });
   app.use("/api/v1/media", writeLimit);
-  installMedia(app, member, blockedIds);
+  installMedia(app, member, blockedIds, requireClerk);
   const validateMedia = async (
     coverImage: string | undefined,
     userId: string,
@@ -366,10 +382,53 @@ export async function createApp(auth: Auth) {
       res.json(value);
     },
   );
+  app.post("/api/v1/workspace/link", writeLimit, async (req: AuthedRequest, res) => {
+    const user = req.authSession?.user;
+    if (!user?.emailVerified) return fail(403, "Verify your email and sign in before saving this workspace.");
+    if (new Date(req.authSession!.session.createdAt).getTime() < Date.now() - 10 * 60000)
+      return fail(403, "Sign in again before saving this workspace.");
+    const current = member(req);
+    const guest = await resolveVisitor(req, res, false);
+    if (current.accountId === user.id) {
+      if (guest) return fail(409, "This account already has a workspace. Your guest workspace was not replaced; sign out to return to it.");
+      return res.json({ ok: true });
+    }
+    if (!guest) return fail(404, "This browser has no guest workspace to attach. Your account is ready to use.");
+    await transaction(async () => {
+      await queryDatabase('SELECT pg_advisory_xact_lock(hashtext($1))', [user.id]);
+      await queryDatabase("SELECT id FROM profiles WHERE id=$1 FOR UPDATE", [String(guest.profile._id)]);
+      const source = await ProfileModel.findById(String(guest.profile._id));
+      if (!source || source.accountId || source.deletedAt || source.suspended || !source.anonymous)
+        return fail(409, "This guest workspace cannot be attached.");
+      if (await ProfileModel.findOne({ accountId: user.id }))
+        return fail(409, "This account already has a workspace. Nothing was replaced.");
+      // Only replace the untouched profile automatically provisioned on sign-in.
+      const fresh = await ProfileModel.findOne({ userId: user.id });
+      if (fresh && (fresh.role !== "member" || fresh.suspended || fresh.deletedAt || fresh.bio || fresh.website || fresh.skills?.length || fresh.name !== user.name || !fresh.username.startsWith("maker_")))
+        return fail(409, "This account already has a profile. Use a new account to save this guest workspace; nothing was replaced.");
+      for (const table of ["ideas", "idea_revisions", "roasts", "replies", "reactions", "improvements", "milestones", "collaborations", "notifications", "reports", "blocks", "audit_logs", "moderation_actions", "appeals", "coffee_orders", "media"]) {
+        const used = await queryDatabase(`SELECT id FROM ${table} WHERE EXISTS (SELECT 1 FROM jsonb_each_text(data) AS field WHERE field.value=$1) LIMIT 1`, [user.id]);
+        if (used.rows.length) return fail(409, "This account already has activity. Use a new account to save this guest workspace; nothing was replaced.");
+      }
+      if (fresh) await ProfileModel.deleteMany({ userId: user.id });
+      await ProfileModel.updateOne({ _id: String(source._id) }, { $set: { accountId: user.id, anonymous: false, ...(req.clerkUserId ? { clerkUserId: req.clerkUserId } : {}) } });
+      await VisitorSession.deleteMany({ userId: source.userId });
+      await Audit.create({ actorId: source.userId, action: "workspace.linked", detail: "Guest workspace attached to a verified account." });
+    });
+    clearVisitor(res);
+    res.json({ ok: true });
+  });
+  app.patch("/api/v1/workspace/preferences", writeLimit, async (req: AuthedRequest, res) => {
+    const p = member(req);
+    if (!req.authSession?.user.emailVerified) return fail(403, "Verify your email to enable reminders.");
+    const input = z.object({ sprintReminders: z.boolean() }).parse(req.body);
+    await ProfileModel.updateOne({ userId: p.userId }, { $set: input });
+    res.json(input);
+  });
   app.get("/api/v1/visitor-session", async (req: AuthedRequest, res) =>
     res.json({
       user:
-        req.authSession?.user ||
+        (req.authSession ? { ...req.authSession.user, id: req.member.userId } : null) ||
         (req.member
           ? {
               id: req.member.userId,
@@ -381,6 +440,10 @@ export async function createApp(auth: Auth) {
           : null),
       profile: req.member ? doc(req.member) : null,
       demo: !production,
+      emailConfigured: Boolean(process.env.SMTP_URL),
+      accountsEnabled: clerkConfigured(),
+      authProvider: req.clerkUserId ? "clerk" : req.authSession ? "moderator" : "guest",
+      guestWorkspaceAvailable: req.authSession ? Boolean(await resolveVisitor(req, res, false)) : false,
       google: Boolean(
         process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET,
       ),
@@ -501,6 +564,7 @@ export async function createApp(auth: Auth) {
     });
   });
   app.post("/api/v1/ideas", writeLimit, async (req: AuthedRequest, res) => {
+    requireClerk(req);
     const p = member(req);
     const input = ideaSchema.parse(req.body);
     const config = await communityConfiguration();
@@ -928,6 +992,28 @@ export async function createApp(auth: Auth) {
       res.status(201).json(doc(milestone));
     },
   );
+  app.get("/api/v1/my-sprints", async (req: AuthedRequest, res) => {
+    const owner = member(req).userId;
+    const input = z.object({
+      state: z.enum(["active", "completed"]).default("active"),
+      offset: z.coerce.number().int().min(0).max(1000000).default(0),
+    }).parse(req.query);
+    const result = await queryDatabase(
+      `SELECT m.id, m.data, i.id AS idea_id, i.data->>'title' AS idea_title
+       FROM milestones m JOIN ideas i ON i.id = m.data->>'ideaId'
+       WHERE i.data->>'authorId' = $1 AND i.data->>'deletedAt' IS NULL
+         AND m.data->>'kind' = 'experiment' AND jsonb_typeof(m.data->'sprint') = 'object'
+         AND (COALESCE(m.data->>'status', 'Planned') IN ('Complete', 'Inconclusive')) = $2
+       ORDER BY m.data->>'createdAt' DESC, m.id DESC LIMIT 21 OFFSET $3`,
+      [owner, input.state === "completed", input.offset],
+    );
+    res.json({
+      items: result.rows.slice(0, 20).map((row) => ({
+        ...row.data, id: row.id, ideaId: row.idea_id, ideaTitle: row.idea_title,
+      })),
+      nextOffset: result.rows.length > 20 ? input.offset + 20 : null,
+    });
+  });
   app.post(
     "/api/v1/ideas/:id/experiments",
     writeLimit,
@@ -1211,7 +1297,8 @@ export async function createApp(auth: Auth) {
         403,
         "Sign out and sign in again before deleting your account.",
       );
-    if (req.authSession)
+    if (req.clerkUserId) await deleteClerkUser(req.clerkUserId);
+    else if (req.authSession)
       await auth.api.revokeSessions({ headers: fromNodeHeaders(req.headers) });
     const uid = p.userId;
 
@@ -1249,7 +1336,7 @@ export async function createApp(auth: Auth) {
           { to: req.authSession.user.email },
           { session },
         );
-        await queryDatabase('DELETE FROM public."user" WHERE id=$1', [uid]);
+        if (!req.clerkUserId) await queryDatabase('DELETE FROM public."user" WHERE id=$1', [req.authSession.user.id]);
       }
       await Audit.create(
         [

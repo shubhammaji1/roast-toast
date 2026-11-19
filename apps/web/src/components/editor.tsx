@@ -1,11 +1,13 @@
 "use client";
 import Link from "next/link";
+import { accountAppearance } from "./account-appearance";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { SignIn, SignUp } from "@clerk/nextjs";
 import { ArrowLeft, ArrowUpRight, Flame, Save, Trash2 } from "lucide-react";
 import {
   ideaSchema,
@@ -38,7 +40,14 @@ const defaults: IdeaInput = {
   status: "published",
   tags: [],
 };
-export function IdeaEditor({ id }: { id?: string }) {
+
+export function IdeaEditor({
+  id,
+  authMode = "signup",
+}: {
+  id?: string;
+  authMode?: "signin" | "signup";
+}) {
   const { me, loading, guard } = useApp();
   if (loading) return <Loading />;
   if (!me?.user)
@@ -52,7 +61,61 @@ export function IdeaEditor({ id }: { id?: string }) {
         </button>
       </Empty>
     );
+  if (!id && me.accountsEnabled && me.authProvider !== "clerk")
+    return <PitchAuthPrompt mode={authMode} />;
   return <EditorForm id={id} key={`${me.user.id}:${id || "new"}`} />;
+}
+function PitchAuthPrompt({ mode }: { mode: "signin" | "signup" }) {
+  const [open, setOpen] = useState(true);
+  const router = useRouter();
+  return (
+    <>
+      <Empty title="Sign in to pitch an idea.">
+        <button className="button primary" onClick={() => setOpen(true)}>
+          Sign in or create an account
+        </button>
+      </Empty>
+      <Modal
+        open={open}
+        onOpenChange={setOpen}
+        auth
+        title={mode === "signin" ? "Back to your ideas." : "Bring your idea to the table."}
+        description={mode === "signin" ? "Sign in to pick up where you left off." : "Create an account to share your pitch and start building."}
+      >
+        <div className="auth-mode-switch" role="group" aria-label="Account action">
+          <button
+            className={`button ${mode === "signup" ? "primary" : "secondary"}`}
+            aria-pressed={mode === "signup"}
+            onClick={() => router.replace("/new")}
+          >
+            Create account
+          </button>
+          <button
+            className={`button ${mode === "signin" ? "primary" : "secondary"}`}
+            aria-pressed={mode === "signin"}
+            onClick={() => router.replace("/new?auth=signin")}
+          >
+            Sign in
+          </button>
+        </div>
+        {mode === "signin" ? (
+          <SignIn
+            appearance={accountAppearance}
+            routing="hash"
+            forceRedirectUrl="/new"
+            signUpUrl="/new"
+          />
+        ) : (
+          <SignUp
+            appearance={accountAppearance}
+            routing="hash"
+            forceRedirectUrl="/new"
+            signInUrl="/new?auth=signin"
+          />
+        )}
+      </Modal>
+    </>
+  );
 }
 function EditorForm({ id }: { id?: string }) {
   const { me, loading, guard, toast } = useApp();
@@ -255,8 +318,9 @@ function EditorForm({ id }: { id?: string }) {
           )}
         >
           <p className="notice">
-            No login or sign-up needed. This browser keeps your editing access.
-            Clearing its cookies removes that access.
+            {me?.authProvider === "clerk"
+              ? "Your ideas and drafts stay in your account. Public ideas appear on The table for everyone."
+              : "This browser keeps your editing access. Clearing its cookies removes that access."}
           </p>
           <section>
             <span className="form-section-number">01 / THE PITCH</span>

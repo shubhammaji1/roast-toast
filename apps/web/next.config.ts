@@ -1,5 +1,7 @@
 import path from "node:path";
+import { config as loadEnv } from "dotenv";
 import type { NextConfig } from "next";
+loadEnv({ path: path.resolve(process.cwd(), "../../.env"), quiet: true });
 const config: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
   transpilePackages: ["@roast/domain"],

@@ -43,7 +43,7 @@ export async function resolveVisitor(
         userId: session.userId,
         deletedAt: null,
       });
-      if (profile) {
+      if (profile && !profile.accountId) {
         res.cookie(visitorCookie, token, {
           ...attributes(),
           expires: new Date(session.expiresAt),

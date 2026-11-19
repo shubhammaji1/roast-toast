@@ -78,6 +78,7 @@ export async function createAuth(db: DatabasePool) {
       enabled: !production || Boolean(process.env.SMTP_URL),
       minPasswordLength: 12,
       requireEmailVerification: production,
+      revokeSessionsOnPasswordReset: true,
       sendResetPassword: async ({ user, url }) =>
         send(user.email, "Reset your Roast & Toast password", url),
     },

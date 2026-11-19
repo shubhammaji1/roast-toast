@@ -11,7 +11,10 @@ import {
   IdeaModel,
   PaymentEvent,
   CoffeeOrder,
+  EmailMessage,
+  MilestoneModel,
 } from "../apps/api/src/models";
+import { sendSprintReminders } from "../apps/api/src/sprint-reminders";
 
 let database: Awaited<ReturnType<typeof testDatabase>>;
 let app: Awaited<ReturnType<typeof createApp>>;
@@ -75,6 +78,73 @@ afterAll(async () => {
 });
 
 describe("Accounts and access boundaries", () => {
+  it("saves a verified guest workspace, recovers it on another device, revokes old access, and sends opt-in reminders once", async () => {
+    // The shared fixture signs up three accounts from the same test IP.
+    await query('DELETE FROM public."rateLimit"');
+    const guest = request.agent(app);
+    const original = await guest.get("/api/v1/visitor-session");
+    const guestId = original.body.user.id;
+    const cookie = original.headers["set-cookie"];
+    const idea = await publish(guest, { status: "draft" });
+    const plan = await guest.post(`/api/v1/ideas/${idea.id}/experiments`).send({ hypothesis: "Neighbors will borrow tools from each other.", experiment: "Ask ten neighbors to try lending a tool.", successCriteria: "Five loans are completed.", sprint: { targetCustomer: "Apartment residents" } });
+    expect(plan.status).toBe(201);
+    const email = "workspace-owner@example.test";
+    const signup = await guest.post("/api/v1/auth/sign-up/email").set("Origin", origin).send({ name: "Workspace owner", email, password: "workspace-password-123" });
+    expect(signup.status).toBe(200);
+    expect((await guest.post("/api/v1/workspace/link").send({})).status).toBe(403);
+    const verification = await guest.post("/api/v1/auth/send-verification-email").set("Origin", origin).send({ email, callbackURL: "/account" });
+    expect(verification.status).toBe(200);
+    const mail = await EmailMessage.findOne({ to: email, subject: "Verify your Roast & Toast email" });
+    const url = new URL(mail.text.match(/https?:\/\/\S+/)[0]);
+    await guest.get(url.pathname + url.search);
+    const link = await guest.post("/api/v1/workspace/link").send({});
+    expect(link.status, JSON.stringify(link.body)).toBe(200);
+    expect((await guest.get("/api/v1/visitor-session")).body.user.id).toBe(guestId);
+    expect((await guest.get(`/api/v1/ideas/${idea.id}`)).status).toBe(200);
+    expect((await request(app).get(`/api/v1/ideas/${idea.id}`).set("Cookie", cookie)).status).toBe(404);
+    const second = request.agent(app);
+    expect((await second.post("/api/v1/auth/sign-in/email").set("Origin", origin).send({ email, password: "workspace-password-123" })).status).toBe(200);
+    expect((await second.get("/api/v1/visitor-session")).body.user.id).toBe(guestId);
+    expect((await second.get("/api/v1/my-sprints")).body.items.some((item: { id: string }) => item.id === plan.body.id)).toBe(true);
+    const person = (await second.get("/api/v1/visitor-session")).body.profile;
+    const publicProfile = await request(app).get(`/api/v1/profiles/${person.username}`);
+    expect(publicProfile.body.profile.accountId).toBeUndefined();
+    expect(publicProfile.body.profile.sprintReminders).toBeUndefined();
+    const now = new Date();
+    await MilestoneModel.updateOne({ _id: plan.body.id }, { $set: { sprint: { ...plan.body.sprint, deadline: new Date(now.getTime() + 3600000).toISOString() } } });
+    await sendSprintReminders(now);
+    expect(await EmailMessage.countDocuments({ to: email, subject: "Your seven-day sprint is ready for a decision" })).toBe(0);
+    expect((await second.patch("/api/v1/workspace/preferences").send({ sprintReminders: true })).status).toBe(200);
+    await sendSprintReminders(now);
+    await sendSprintReminders(now);
+    expect(await EmailMessage.countDocuments({ to: email, subject: "Your seven-day sprint is ready for a decision" })).toBe(1);
+    await second.post("/api/v1/auth/request-password-reset").set("Origin", origin).send({ email, redirectTo: "/reset-password" });
+    const resetMail = await EmailMessage.findOne({ to: email, subject: "Reset your Roast & Toast password" });
+    const resetUrl = new URL(resetMail.text.match(/https?:\/\/\S+/)[0]);
+    const token = resetUrl.pathname.split("/").pop();
+    expect((await request(app).post("/api/v1/auth/reset-password").set("Origin", origin).send({ token, newPassword: "recovered-password-123" })).status).toBe(200);
+    expect((await second.get("/api/v1/visitor-session")).body.user.id).not.toBe(guestId);
+    const recovered = request.agent(app);
+    expect((await recovered.post("/api/v1/auth/sign-in/email").set("Origin", origin).send({ email, password: "recovered-password-123" })).status).toBe(200);
+    expect((await recovered.get("/api/v1/visitor-session")).body.user.id).toBe(guestId);
+    expect((await recovered.get(`/api/v1/ideas/${idea.id}`)).status).toBe(200);
+    const deletion = await recovered.delete("/api/v1/my-data").send({ confirmation: "DELETE MY ACCOUNT" });
+    expect(deletion.status, JSON.stringify(deletion.body)).toBe(200);
+    expect((await query('SELECT id FROM public."user" WHERE email=$1', [email])).rows).toHaveLength(0);
+  });
+  it("does not replace an existing account workspace and preserves the guest after a failed link", async () => {
+    await query('DELETE FROM public."rateLimit"');
+    await publish();
+    await query('UPDATE public."user" SET "emailVerified"=true WHERE email=$1', ["creator@example.test"]);
+    const guest = request.agent(app);
+    const original = await guest.get("/api/v1/visitor-session");
+    const idea = await publish(guest, { status: "draft" });
+    expect((await guest.post("/api/v1/auth/sign-in/email").set("Origin", origin).send({ email: "creator@example.test", password: "test-passphrase-12345" })).status).toBe(200);
+    expect((await guest.post("/api/v1/workspace/link").send({})).status).toBe(409);
+    await guest.post("/api/v1/auth/sign-out").set("Origin", origin).send({});
+    expect((await guest.get("/api/v1/visitor-session")).body.user.id).toBe(original.body.user.id);
+    expect((await guest.get(`/api/v1/ideas/${idea.id}`)).status).toBe(200);
+  });
   it("redirects the API root to its resource index", async () => {
     const root = await request(app).get("/");
     expect(root.status).toBe(307);
@@ -519,6 +589,24 @@ describe("The feedback and build loop", () => {
       status: "Complete", decision: "Build", outcome: "Six households completed loans.",
       sprint: { targetCustomer: "Apartment residents", deadline: plan.body.sprint.deadline },
     });
+  });
+  it("lists only owned sprints, separates finished results, and excludes deleted ideas", async () => {
+    const idea = await publish(creator, { visibility: "unlisted" });
+    const input = { hypothesis: "Residents want to borrow tools.", experiment: "Ask ten residents to join a manual trial.", successCriteria: "Five residents join.", sprint: { targetCustomer: "Apartment residents" } };
+    const plan = await creator.post(`/api/v1/ideas/${idea.id}/experiments`).send(input);
+    expect(plan.status).toBe(201);
+    const active = await creator.get("/api/v1/my-sprints?state=active");
+    expect(active.status).toBe(200);
+    expect(active.body.items.find((item: { id: string }) => item.id === plan.body.id)).toMatchObject({ ideaId: idea.id, ideaTitle: idea.title });
+    const other = await reviewer.get("/api/v1/my-sprints?state=active");
+    expect(other.body.items.some((item: { id: string }) => item.id === plan.body.id)).toBe(false);
+    expect((await creator.get("/api/v1/my-sprints?offset=-1")).status).toBe(400);
+    await creator.patch(`/api/v1/experiments/${plan.body.id}`).send({ status: "Inconclusive", outcome: "Only two residents responded.", decision: "Test again" });
+    const completed = await creator.get("/api/v1/my-sprints?state=completed");
+    expect(completed.body.items.find((item: { id: string }) => item.id === plan.body.id)).toMatchObject({ decision: "Test again" });
+    expect((await creator.get("/api/v1/my-sprints?state=active")).body.items.some((item: { id: string }) => item.id === plan.body.id)).toBe(false);
+    await creator.delete(`/api/v1/ideas/${idea.id}`);
+    expect((await creator.get("/api/v1/my-sprints?state=completed")).body.items.some((item: { id: string }) => item.id === plan.body.id)).toBe(false);
   });
   it("filters search and categories, and paginates without duplicates", async () => {
     const unique = await publish(creator, {

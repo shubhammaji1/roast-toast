@@ -5,7 +5,6 @@ import {
   Home,
   Compass,
   Bookmark,
-  CircleHelp,
   Bell,
   Plus,
   Search,
@@ -15,6 +14,9 @@ import {
   ChevronRight,
   Flame,
   Coffee,
+  CalendarCheck,
+  UserRound,
+  Lightbulb,
 } from "lucide-react";
 import { useState } from "react";
 import { useApp } from "./providers";
@@ -23,6 +25,8 @@ import { Brand } from "./ui";
 const nav = [
   { href: "/feed", label: "The table", icon: Home },
   { href: "/explore", label: "Explore ideas", icon: Compass },
+  { href: "/my-sprints", label: "My Sprints", icon: CalendarCheck },
+  { href: "/my-ideas", label: "My ideas", icon: Lightbulb },
   { href: "/saved", label: "Saved for later", icon: Bookmark },
   { href: "/notifications", label: "Notifications", icon: Bell },
 ];
@@ -131,6 +135,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <kbd>↵</kbd>
           </form>
           <div className="topbar-account">
+            <Link prefetch={false} className="icon-button" href="/account" aria-label="My account" title="Save my workspace"><UserRound size={19} /></Link>
+            <Link prefetch={false} className="icon-button" href="/my-sprints" aria-label="My Sprints" title="My Sprints" aria-current={path === "/my-sprints" ? "page" : undefined}>
+              <CalendarCheck size={19} />
+            </Link>
             <a
               className="button coffee-button small-button topbar-support"
               href="https://buymeacoffee.com/BeyondTheSyntax"
@@ -254,12 +262,23 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <Compass size={20} />
           <span>Explore</span>
         </Link>
+        <Link
+          prefetch={false}
+          href="/my-sprints"
+          aria-current={path === "/my-sprints" ? "page" : undefined}
+        >
+          <CalendarCheck size={20} />
+          <span>My Sprints</span>
+        </Link>
         <button
           className="mobile-create"
           onClick={() => guard(() => router.push("/new"))}
           aria-label="Pitch an idea"
         >
-          <Plus size={25} />
+          <span className="mobile-create-icon">
+            <Plus size={17} />
+          </span>
+          <span>Pitch</span>
         </button>
         <Link
           prefetch={false}
@@ -271,11 +290,20 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </Link>
         <Link
           prefetch={false}
-          href="/about"
-          aria-current={path === "/about" ? "page" : undefined}
+          href="/my-ideas"
+          aria-current={path === "/my-ideas" ? "page" : undefined}
         >
-          <CircleHelp size={20} />
-          <span>About</span>
+          <Lightbulb size={20} />
+          <span>My ideas</span>
+        </Link>
+        <Link
+          prefetch={false}
+          href="/account"
+          aria-label="Profile"
+          aria-current={path === "/account" ? "page" : undefined}
+        >
+          <UserRound size={20} />
+          <span>Profile</span>
         </Link>
       </nav>
     </div>

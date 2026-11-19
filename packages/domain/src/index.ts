@@ -195,6 +195,7 @@ export type Profile = {
   demo: boolean;
   color: string;
   role?: string;
+  sprintReminders?: boolean;
 };
 export type Idea = IdeaInput & {
   id: string;
@@ -249,6 +250,12 @@ export type Milestone = {
   sprint?: { targetCustomer: string; startedAt: string; deadline: string };
   decision?: "Build" | "Change" | "Stop" | "Test again";
 };
+export type SprintItem = Milestone & {
+  ideaId: string;
+  ideaTitle: string;
+  sprint: { targetCustomer: string; startedAt: string; deadline: string };
+};
+export type SprintPage = { items: SprintItem[]; nextOffset: number | null };
 export type FeedbackSummary = {
   roastCount: number;
   helpfulVotes: number;

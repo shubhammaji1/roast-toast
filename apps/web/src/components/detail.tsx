@@ -75,9 +75,17 @@ export function IdeaDetail({ id }: { id: string }) {
     queryFn: () => api<Detail>(`/ideas/${id}`),
   });
   const detail = result.data;
+  useEffect(() => {
+    if (!detail || tab !== "journey") return;
+    const anchor = window.location.hash.slice(1);
+    if (anchor.startsWith("sprint-")) {
+      document.getElementById(anchor)?.scrollIntoView({ block: "start" });
+    }
+  }, [detail, tab]);
   const refresh = () => {
     client.invalidateQueries({ queryKey: ["idea", id] });
     client.invalidateQueries({ queryKey: ["ideas"] });
+    client.invalidateQueries({ queryKey: ["my-sprints"] });
   };
   function react(kind: "interest" | "bookmark" | "follow", active: boolean) {
     if (!reaction.isPending) reaction.mutate({ kind, active });
@@ -156,7 +164,8 @@ export function IdeaDetail({ id }: { id: string }) {
         <section className="experiment-card sprint-entry" aria-label="Seven-day validation sprint">
           <div><span className="eyebrow">FROM IDEA TO EVIDENCE</span>
           <h2>What can you learn in seven days?</h2>
-          <p>Test one assumption, record what happened, and choose your next move.</p></div>
+          <p>Test one assumption, record what happened, and choose your next move.</p>
+          {me?.user?.anonymous && <Link className="text-link" href="/account">Save my workspace to keep this idea across devices</Link>}</div>
           <SprintStart idea={idea} onStarted={() => {
             refresh(); toast("Your seven-day sprint has started.");
             router.push(`/ideas/${id}?tab=journey`, { scroll: false });
@@ -528,7 +537,7 @@ export function IdeaDetail({ id }: { id: string }) {
                     detail.milestones
                       .filter((m) => m.kind === "experiment")
                       .map((experiment) => (
-                        <article className="experiment-card" key={experiment.id}>
+                        <article className="experiment-card" id={`sprint-${experiment.id}`} key={experiment.id}>
                           <div className="suggestion-labels">
                             <span className="eyebrow">{experiment.sprint ? "SEVEN-DAY SPRINT" : "ASSUMPTION"}</span>
                             <span className="stage progress">{experiment.status || "Planned"}</span>

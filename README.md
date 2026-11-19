@@ -20,7 +20,9 @@ Demo records are opt-in: set `SEED_DEMO=1` only for a disposable development dat
 
 ## Posting and creator support
 
-There is **no member login or signup**. A random, HTTP-only browser cookie keeps ownership of posts, drafts, saves, and interactions. Only a hash of this secret is stored in Supabase. Clearing cookies or moving to another browser loses editing access; there is no email recovery account. You can edit your name/profile, export your data, or delete your browser identity from **Your space**.
+When Clerk is configured, sign in before submitting an idea or uploading its cover image. Each Clerk account has its own **My ideas** dashboard; published public ideas appear together on **The table** for everyone. Browsing and community participation remain open to guests. Existing guest workspaces can still be attached to a verified Clerk account from **Save my workspace** at `/account`; existing idea, draft, media, feedback and sprint IDs stay unchanged. The old guest session is revoked, and the verified account opens the same workspace on another device. Existing account activity is never overwritten; use a new account if linking reports a conflict. Unsaved drafts in local browser storage remain on that device. Unlinked guest work still depends on keeping its cookies.
+
+Clerk handles member verification and password recovery through its hosted authentication service. Sprint reminders are separate and opt-in under My account: the API checks once per minute and queues an email during an active sprint’s last 24 hours. Completed, archived, deleted, suspended, unverified and opted-out workspaces are excluded. Keep the API running for reminders; if it is offline for the entire last 24 hours, no late reminder is sent. Without SMTP, local reminder messages are saved in the development outbox; they are not delivered to an inbox.
 
 The publishing form accepts an optional **Buy Me a Coffee URL**, including `https://buymeacoffee.com/BeyondTheSyntax` or `buymeacoffee.com/BeyondTheSyntax`. The latter is normalized to HTTPS. Invalid URLs show inline errors without losing the draft. The form also links to the official signup page in a new tab, allowing the creator to return and paste their page URL. Local drafts survive the trip. Coffee buttons open that creator's external page. Payments, receipts, and refunds are handled there. This app does not process charges, collect payment details, or claim verified donations.
 
@@ -30,7 +32,7 @@ The canonical API is `/api/v1`: create posts with `POST /api/v1/ideas`, then rea
 
 - Publish, save drafts, revise, archive, and delete ideas; public/unlisted visibility; optimistic version checks and revision history.
 - Plan low-cost validation experiments with success criteria, track outcomes, and review a private creator-only synthesis of feedback signals.
-- Start a seven-day sprint from your own idea page: define a target customer, risky assumption, small test, and measurable success criteria. The server sets a seven-day deadline; track progress in Build journey and record evidence plus a Build, Change, Stop, or Test again decision to finish. Sprints share the idea's visibility and do not book reviewers or send deadline reminders.
+- Start a seven-day sprint from your own idea page: define a target customer, risky assumption, small test, and measurable success criteria. The server sets a seven-day deadline; track progress in Build journey and record evidence plus a Build, Change, Stop, or Test again decision to finish. Sprints share the idea's visibility and do not book reviewers. Verified account holders can opt in to deadline reminders.
 - Structured roasts and replies, helpful reactions, creator acknowledgments, suggestions, milestone updates, collaborations, and notifications.
 - Search, categories, latest/trending/building feeds, cursor pagination, saved ideas, and follows.
 - Private draft images, validated image uploads, public profiles, mutual blocks, reports, suspensions/appeals, and audited moderation.
@@ -38,11 +40,15 @@ The canonical API is `/api/v1`: create posts with `POST /api/v1/ideas`, then rea
 
 ## Architecture and security
 
+**My Sprints** (`/my-sprints`) is available from the sidebar and the calendar shortcut in the top bar, including on phones. It lists the current browser identity's active and completed sprints, with deadline-based daily guidance and links to the matching Build journey entry. Timeline progress measures elapsed time, not completed tasks. Deleted ideas are excluded; completed and inconclusive sprints appear in Completed sprints.
+
 `apps/web` uses Next.js, React, TypeScript, TanStack Query, and a custom visual system. `apps/api` uses Express, Zod, and PostgreSQL on Supabase. `packages/domain` contains shared input contracts. MongoDB and Mongoose are removed.
 
 The API connects through `pg`, with parameterized SQL and a small repository layer. Each entity has its own JSONB table, with unique indexes, foreign keys on generated relationship columns, state checks, and feed indexes. SQL transactions cover coupled writes; version predicates reject stale edits. Supabase tables have row-level security enabled with no public API policies. Browser clients access the same-origin Express API, which enforces ownership, privacy, CSRF checks, and moderation. Database credentials never reach the browser. TLS certificate validation remains enabled for hosted connections.
 
-Moderator accounts are separate and use Better Auth's PostgreSQL adapter. Only `/admin` exposes moderator sign-in. `ADMIN_EMAILS` names eligible **verified** moderator emails; roles are server-managed. Configure SMTP when using private moderator accounts in production. Production also requires HTTPS, a unique secret, and Redis for shared abuse limits. Optional private S3 storage is supported for uploads; otherwise provision a durable uploads volume.
+Member authentication uses Clerk. Set matching `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and server-only `CLERK_SECRET_KEY` from the same Clerk application in `.env`, then restart the dev server (or rebuild/redeploy). Enable email sign-up, verification and password recovery in Clerk. `/account` hosts its sign-up and sign-in components. The API verifies session tokens for `APP_ORIGIN` and checks the current Clerk user and session before granting access. Never expose the secret key in browser configuration.
+
+`/admin` retains the existing Better Auth moderator sign-in. `ADMIN_EMAILS` names eligible verified moderator emails; roles remain server-managed. SMTP is independent of Clerk: configure `SMTP_URL` and `EMAIL_FROM` for sprint reminders and moderator emails. Production also requires HTTPS, a unique Better Auth secret, and Redis for shared limits and email retries. Run `npm run db:migrate` for the workspace-link uniqueness index. Optional private S3 storage is supported for uploads; otherwise provision a durable uploads volume.
 
 ## Checks
 

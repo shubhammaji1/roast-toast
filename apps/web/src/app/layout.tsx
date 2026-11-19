@@ -45,7 +45,9 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
       </head>
-      <body>
+      {/* Extensions can add body attributes before hydration. Keep suppression
+          on this element only so mismatches within the app remain visible. */}
+      <body suppressHydrationWarning>
         <Providers>
           <Shell>{children}</Shell>
         </Providers>

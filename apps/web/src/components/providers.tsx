@@ -9,6 +9,7 @@ import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { Check, ArrowRight } from "lucide-react";
 import { api, type Me } from "@/lib/api";
 import { Modal } from "./ui";
+import { ClerkProvider, useAuth } from "@clerk/nextjs";
 
 type Context = {
   me: Me | undefined;
@@ -82,6 +83,15 @@ function AppProvider({ children }: { children: React.ReactNode }) {
   );
 }
 export function Providers({ children }: { children: React.ReactNode }) {
+  const key = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  return key ? <ClerkProvider publishableKey={key} signInUrl="/account" signUpUrl="/account" signInForceRedirectUrl="/account" signUpForceRedirectUrl="/account"><ClerkQueries>{children}</ClerkQueries></ClerkProvider> : <QueryProviders>{children}</QueryProviders>;
+}
+function ClerkQueries({ children }: { children: React.ReactNode }) {
+  const { userId, isLoaded } = useAuth();
+  if (!isLoaded) return null;
+  return <QueryProviders key={userId || "guest"}>{children}</QueryProviders>;
+}
+function QueryProviders({ children }: { children: React.ReactNode }) {
   const [client] = useState(
     () =>
       new QueryClient({

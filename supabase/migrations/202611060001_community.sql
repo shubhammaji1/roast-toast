@@ -108,6 +108,7 @@ REVOKE ALL ON public.media FROM PUBLIC;
 DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='anon') THEN REVOKE ALL ON public.media FROM anon, authenticated; END IF; END $$;
 CREATE INDEX IF NOT EXISTS media_created ON public.media ((data->>'createdAt') DESC, id DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS profiles_user_unique ON public.profiles ((data->>'userId'));
+CREATE UNIQUE INDEX IF NOT EXISTS profiles_account_unique ON public.profiles ((data->>'accountId')) WHERE data->>'accountId' IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS profiles_username_unique ON public.profiles ((data->>'username'));
 CREATE UNIQUE INDEX IF NOT EXISTS visitor_token_unique ON public.visitor_sessions ((data->>'tokenHash'));
 CREATE UNIQUE INDEX IF NOT EXISTS revision_unique ON public.idea_revisions ((data->>'ideaId'),(data->>'revision'));

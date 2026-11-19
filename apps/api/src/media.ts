@@ -15,6 +15,7 @@ export function installMedia(
   app: Express,
   member: (req: any) => any,
   blockedIds: (req: any) => Promise<string[]>,
+  requireClerk: (req: any) => void,
 ) {
   const upload = multer({
     storage: multer.memoryStorage(),
@@ -35,6 +36,7 @@ export function installMedia(
   app.post(
     "/api/v1/media",
     (req, _res, next) => {
+      requireClerk(req);
       member(req);
       next();
     },

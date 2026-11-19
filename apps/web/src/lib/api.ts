@@ -13,6 +13,10 @@ export type Me = {
   demo: boolean;
   google: boolean;
   payments: string;
+  accountsEnabled?: boolean;
+  emailConfigured?: boolean;
+  guestWorkspaceAvailable?: boolean;
+  authProvider?: "clerk" | "moderator" | "guest";
 };
 export class ApiError extends Error {
   constructor(

@@ -10,6 +10,8 @@ import {
 } from "@roast/domain";
 
 const bodies: Record<string, z.ZodType> = {
+  "POST /api/v1/workspace/link": z.object({}),
+  "PATCH /api/v1/workspace/preferences": z.object({ sprintReminders: z.boolean() }),
   "POST /api/v1/ideas": ideaSchema,
   "PATCH /api/v1/ideas/{id}": ideaSchema.extend({
     version: z.number().int().min(0),
@@ -44,6 +46,7 @@ const publicReads = new Set([
   "/api/v1/community-settings",
 ]);
 const summaries: Record<string, string> = {
+  "GET /api/v1/my-sprints": "List the current creator's active or completed sprints",
   "GET /api/v1/ideas": "Search and cursor-paginate visible ideas",
   "GET /api/v1/ideas/{id}": "Read an idea and its bounded discussion/journey",
   "POST /api/v1/ideas": "Create a draft or published idea",
@@ -84,6 +87,10 @@ export function openApiDocument(app: Express, origin: string) {
         required: true,
         schema: { type: "string" },
       }));
+      if (path === "/api/v1/my-sprints" && method === "get")
+        parameters.push(...["state", "offset"].map((name) => ({
+          name, in: "query", required: false, schema: { type: "string" },
+        })));
       if (path === "/api/v1/ideas" && method === "get")
         parameters.push(
           ...["tab", "q", "category", "cursor", "limit"].map((name) => ({

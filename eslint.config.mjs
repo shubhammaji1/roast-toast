@@ -6,6 +6,7 @@ export default ts.config(
       "**/node_modules/**",
       "**/.next/**",
       "**/.next-e2e/**",
+      "**/.next-check/**",
       "**/dist/**",
       "**/next-env.d.ts",
     ],

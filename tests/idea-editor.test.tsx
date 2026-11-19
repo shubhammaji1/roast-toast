@@ -15,7 +15,11 @@ const mocks = vi.hoisted(() => ({
   api: vi.fn(),
   send: vi.fn(),
   push: vi.fn(),
+  replace: vi.fn(),
   toast: vi.fn(),
+  me: null as
+    | { user: { id: string }; accountsEnabled?: boolean; authProvider?: string }
+    | null,
 }));
 vi.mock("../apps/web/src/lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../apps/web/src/lib/api")>()),
@@ -24,13 +28,15 @@ vi.mock("../apps/web/src/lib/api", async (importOriginal) => ({
 }));
 vi.mock("../apps/web/src/components/providers", () => ({
   useApp: () => ({
-    me: { user: { id: "visitor-1" } },
+    me: mocks.me,
     loading: false,
     guard: (fn: () => void) => fn(),
     toast: mocks.toast,
   }),
 }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push }) }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mocks.push, replace: mocks.replace }),
+}));
 vi.mock("next/link", () => ({
   default: ({ children, ...props }: { children: ReactNode }) =>
     createElement("a", props, children),
@@ -39,11 +45,27 @@ vi.mock("../apps/web/src/components/coffee", () => ({
   coffeeSignupUrl: "https://buymeacoffee.com/signup",
 }));
 vi.mock("../apps/web/src/components/ui", () => ({
-  Empty: () => null,
+  Empty: ({ title, children }: { title: string; children: ReactNode }) =>
+    createElement("div", {}, title, children),
   ErrorState: () => null,
-  Modal: () => null,
+  Modal: ({
+    open,
+    title,
+    children,
+  }: {
+    open: boolean;
+    title: string;
+    children: ReactNode;
+  }) =>
+    open
+      ? createElement("div", { role: "dialog", "aria-label": title }, children)
+      : null,
   Cover: () => null,
   Loading: () => null,
+}));
+vi.mock("@clerk/nextjs", () => ({
+  SignIn: () => createElement("div", { "data-testid": "clerk-sign-in" }),
+  SignUp: () => createElement("div", { "data-testid": "clerk-sign-up" }),
 }));
 import { IdeaEditor } from "../apps/web/src/components/editor";
 import { ApiError } from "../apps/web/src/lib/api";
@@ -52,12 +74,47 @@ let client: QueryClient;
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
+  mocks.me = { user: { id: "visitor-1" } };
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   mocks.api.mockResolvedValue(defaultCommunityConfig);
 });
 afterEach(() => {
   cleanup();
   client.clear();
+});
+
+it("opens the Clerk signup popup before showing the idea submission form", () => {
+  mocks.me = {
+    user: { id: "visitor-1" },
+    accountsEnabled: true,
+    authProvider: "guest",
+  };
+  render(
+    createElement(QueryClientProvider, { client }, createElement(IdeaEditor)),
+  );
+  expect(screen.getByRole("dialog", { name: "Bring your idea to the table." })).toBeTruthy();
+  expect(screen.getByTestId("clerk-sign-up")).toBeTruthy();
+  expect(screen.queryByLabelText(/Give it a good title/)).toBeNull();
+  expect(mocks.api).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+  expect(mocks.replace).toHaveBeenCalledWith("/new?auth=signin");
+});
+
+it("opens sign-in mode directly on the pitch route", () => {
+  mocks.me = {
+    user: { id: "visitor-1" },
+    accountsEnabled: true,
+    authProvider: "guest",
+  };
+  render(
+    createElement(
+      QueryClientProvider,
+      { client },
+      createElement(IdeaEditor, { authMode: "signin" }),
+    ),
+  );
+  expect(screen.getByRole("dialog", { name: "Back to your ideas." })).toBeTruthy();
+  expect(screen.getByTestId("clerk-sign-in")).toBeTruthy();
 });
 
 function editor() {
