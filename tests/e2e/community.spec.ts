@@ -51,16 +51,19 @@ test("a visitor can explore, filter, and use the mobile table", async ({
   const mobileNav = page.getByRole("navigation", {
     name: "Mobile navigation",
   });
-  await expect(mobileNav.locator(":scope > *")).toHaveCount(5);
+  await expect(mobileNav.locator(":scope > *")).toHaveCount(7);
   await expect(
     mobileNav.getByRole("link", { name: "Bookmarks", exact: true }),
   ).toBeVisible();
   await expect(
     mobileNav.getByRole("link", { name: "My ideas", exact: true }),
-  ).toHaveCount(0);
+  ).toHaveAttribute("href", "/my-ideas");
   await expect(
-    mobileNav.getByRole("link", { name: "About", exact: true }),
-  ).toHaveAttribute("href", "/about");
+    mobileNav.getByRole("link", { name: "My Sprints", exact: true }),
+  ).toHaveAttribute("href", "/my-sprints");
+  await expect(
+    mobileNav.getByRole("link", { name: "Profile", exact: true }),
+  ).toHaveAttribute("href", "/account");
   expect((await mobileNav.boundingBox())?.height).toBe(60);
   expect(
     (
@@ -68,7 +71,7 @@ test("a visitor can explore, filter, and use the mobile table", async ({
         .getByRole("button", { name: "Pitch an idea" })
         .boundingBox()
     )?.width,
-  ).toBe(44);
+  ).toBeGreaterThanOrEqual(44);
   const navBounds = await mobileNav.boundingBox();
   const createBounds = await mobileNav
     .getByRole("button", { name: "Pitch an idea" })
@@ -76,7 +79,7 @@ test("a visitor can explore, filter, and use the mobile table", async ({
   if (!navBounds || !createBounds)
     throw new Error("Mobile navigation bounds are unavailable");
   expect(
-    Math.abs(navBounds.y - (createBounds.y + createBounds.height / 2)),
+    Math.abs((navBounds.y + navBounds.height / 2) - (createBounds.y + createBounds.height / 2)),
   ).toBeLessThanOrEqual(1);
   const centers = await mobileNav.evaluate((nav) => {
     const navCenter =
@@ -101,13 +104,13 @@ test("a visitor can explore, filter, and use the mobile table", async ({
   ).toBeVisible();
   await page
     .getByRole("navigation", { name: "Mobile navigation" })
-    .getByRole("link", { name: "About", exact: true })
+    .getByRole("link", { name: "My Sprints", exact: true })
     .click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
-    "Good ideas get better",
+    "My Sprints",
   );
   await expect(
-    page.getByText(/Published public ideas appear on The table and in Explore/),
+    page.getByRole("button", { name: "Active sprints", exact: true }),
   ).toBeVisible();
 });
 

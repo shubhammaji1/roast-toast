@@ -5,6 +5,8 @@ node_modules/
 .next/
 **/.next/
 .next-e2e/
+**/.next-e2e/
+**/.next-check/
 dist/
 coverage/
 test-results/
