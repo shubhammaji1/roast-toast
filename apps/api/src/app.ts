@@ -246,7 +246,7 @@ export async function createApp(auth: Auth) {
     return req.member;
   };
   const requireClerk = (req: AuthedRequest) => {
-    if (clerkConfigured() && !req.clerkUserId)
+    if ((production || clerkConfigured()) && !req.clerkUserId)
       return fail(401, "Sign in with Clerk to upload an idea or image.");
   };
   const admin = (req: AuthedRequest) => {

@@ -72,6 +72,7 @@ import { ApiError } from "../apps/web/src/lib/api";
 
 let client: QueryClient;
 beforeEach(() => {
+  vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "");
   vi.clearAllMocks();
   localStorage.clear();
   mocks.me = { user: { id: "visitor-1" } };
@@ -79,11 +80,13 @@ beforeEach(() => {
   mocks.api.mockResolvedValue(defaultCommunityConfig);
 });
 afterEach(() => {
+  vi.unstubAllEnvs();
   cleanup();
   client.clear();
 });
 
 it("opens the Clerk signup popup before showing the idea submission form", () => {
+  vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_mock");
   mocks.me = {
     user: { id: "visitor-1" },
     accountsEnabled: true,
@@ -101,6 +104,7 @@ it("opens the Clerk signup popup before showing the idea submission form", () =>
 });
 
 it("opens sign-in mode directly on the pitch route", () => {
+  vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_mock");
   mocks.me = {
     user: { id: "visitor-1" },
     accountsEnabled: true,
@@ -115,6 +119,22 @@ it("opens sign-in mode directly on the pitch route", () => {
   );
   expect(screen.getByRole("dialog", { name: "Back to your ideas." })).toBeTruthy();
   expect(screen.getByTestId("clerk-sign-in")).toBeTruthy();
+});
+
+it("requires sign-in when the deployed API reports accounts disabled but the frontend has Clerk configured", () => {
+  vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_mock");
+  mocks.me = { user: { id: "visitor-1" }, accountsEnabled: false, authProvider: "guest" };
+  render(createElement(QueryClientProvider, { client }, createElement(IdeaEditor)));
+  expect(screen.getByTestId("clerk-sign-up")).toBeTruthy();
+  expect(screen.queryByLabelText(/Give it a good title/)).toBeNull();
+});
+
+it("blocks production posting when Clerk is missing", () => {
+  vi.stubEnv("NODE_ENV", "production");
+  mocks.me = { user: { id: "visitor-1" }, accountsEnabled: false, authProvider: "guest" };
+  render(createElement(QueryClientProvider, { client }, createElement(IdeaEditor)));
+  expect(screen.getByText(/Sign-in is temporarily unavailable\./)).toBeTruthy();
+  expect(screen.queryByLabelText(/Give it a good title/)).toBeNull();
 });
 
 function editor() {

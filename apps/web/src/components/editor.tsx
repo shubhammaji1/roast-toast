@@ -61,13 +61,17 @@ export function IdeaEditor({
         </button>
       </Empty>
     );
-  if (!id && me.accountsEnabled && me.authProvider !== "clerk")
+  const signInRequired = me.accountsEnabled || Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) || process.env.NODE_ENV === "production";
+  if (!id && signInRequired && me.authProvider !== "clerk")
     return <PitchAuthPrompt mode={authMode} />;
   return <EditorForm id={id} key={`${me.user.id}:${id || "new"}`} />;
 }
 function PitchAuthPrompt({ mode }: { mode: "signin" | "signup" }) {
   const [open, setOpen] = useState(true);
   const router = useRouter();
+  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+    return <Empty title="Sign-in is temporarily unavailable.">Please try again once account access is restored. Signing in is required to post an idea.</Empty>;
+  }
   return (
     <>
       <Empty title="Sign in to pitch an idea.">

@@ -66,7 +66,7 @@ export function Landing() {
   const building = useBuildingIdeas();
   const buildingIdea = building.data?.ideas[0];
   return (
-    <>
+    <div className="landing-page">
       <section className="hero">
         <div className="hero-copy">
           <div className="eyebrow hero-kicker">
@@ -75,7 +75,7 @@ export function Landing() {
           <h1>
             YOUR IDEA
             <br />
-            ISN’T SPECIAL<span className="period">.</span>
+            <span className="hero-isnt">ISN’T</span>{" "}<span className="hero-special">SPECIAL<span className="period">.</span></span>
             <br />
             <span className="hero-yet">
               Yet.
@@ -271,7 +271,7 @@ export function Landing() {
           </SmallLink>
         </div>
       </section>
-    </>
+    </div>
   );
 }
 
@@ -325,9 +325,10 @@ export function Feed({
               : "THE COMMUNITY, IN PROGRESS"}
           </span>
           <Heading className={landing ? "section-title" : "page-title"}>
-            {heading}
+            {landing ? <><span className="landing-feed-desktop">{heading}</span><span className="landing-feed-mobile">On the table right now <Flame size={19} /></span></> : heading}
             <span className="heading-dot">↘</span>
           </Heading>
+          {landing && <p className="landing-feed-caption">The latest ideas, feedback, and pitches from the community.</p>}
         </div>
         {mode === "mine" ? (
           <button
