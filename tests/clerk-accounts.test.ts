@@ -75,16 +75,36 @@ beforeEach(() => {
   sdk.getSession.mockResolvedValue({ status: "active", createdAt: Date.now() });
 });
 
+it("passes a canonical authorized party to Clerk when APP_ORIGIN includes whitespace and a trailing slash", async () => {
+  const original = process.env.APP_ORIGIN;
+  vi.stubEnv("APP_ORIGIN", "  https://clerk-origin.example.test/  ");
+  try {
+    const response = await request(app)
+      .get("/api/v1/visitor-session")
+      .set("Authorization", "Bearer verified-publisher");
+    expect(response.status).toBe(200);
+    expect(sdk.authenticateRequest).toHaveBeenCalledWith(
+      expect.any(Request),
+      expect.objectContaining({
+        authorizedParties: ["https://clerk-origin.example.test"],
+      }),
+    );
+    expect(new URL(sdk.authenticateRequest.mock.calls[0][0].url).origin).toBe(
+      "https://clerk-origin.example.test",
+    );
+  } finally {
+    vi.stubEnv("APP_ORIGIN", original);
+  }
+});
+
 it("requires Clerk to post while keeping the public feed shared and dashboards separate", async () => {
   const guest = request.agent(app);
-  const denied = await guest
-    .post("/api/v1/ideas")
-    .send({
-      title: "Guest pitch",
-      pitch: "A useful idea without an account.",
-      category: "Tech",
-      status: "published",
-    });
+  const denied = await guest.post("/api/v1/ideas").send({
+    title: "Guest pitch",
+    pitch: "A useful idea without an account.",
+    category: "Tech",
+    status: "published",
+  });
   expect(denied.status).toBe(401);
   expect(denied.body.error).toContain("Clerk");
   expect((await guest.post("/api/v1/media")).status).toBe(401);
@@ -141,15 +161,13 @@ it("links a Clerk identity without changing guest ownership, then restores it on
   const before = await guest.get("/api/v1/visitor-session");
   vi.stubEnv("CLERK_SECRET_KEY", "");
   vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "");
-  const idea = await guest
-    .post("/api/v1/ideas")
-    .send({
-      title: "Clerk workspace recovery test",
-      pitch:
-        "Keep this unpublished idea and sprint when signing in on a second device.",
-      category: "Tech",
-      status: "draft",
-    });
+  const idea = await guest.post("/api/v1/ideas").send({
+    title: "Clerk workspace recovery test",
+    pitch:
+      "Keep this unpublished idea and sprint when signing in on a second device.",
+    category: "Tech",
+    status: "draft",
+  });
   expect(idea.status).toBe(201);
   vi.stubEnv("CLERK_SECRET_KEY", "sk_test_mock");
   vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_mock");

@@ -49,9 +49,9 @@ const publicReads = new Set([
   "/api/v1/analytics/online",
 ]);
 const summaries: Record<string, string> = {
-  "GET /api/v1/analytics/online": "Count browsers active during the past two minutes; no visitor details",
+  "GET /api/v1/analytics/online": "Read cumulative visitor total and browsers active during the past two minutes; no visitor details",
   "POST /api/v1/analytics/heartbeat": "Record browser presence and approximate IP location with a private 30-day analytics cookie",
-  "GET /api/v1/admin/analytics": "Moderator-only 30-day visitor counts, top locations and recent IP addresses; today is UTC",
+  "GET /api/v1/admin/analytics": "Moderator-only cumulative total, 30-day visitor counts, top locations and recent IP addresses; today is UTC",
   "GET /api/v1/my-sprints": "List the current creator's active or completed sprints",
   "GET /api/v1/ideas": "Search and cursor-paginate visible ideas",
   "GET /api/v1/ideas/{id}": "Read an idea and its bounded discussion/journey",

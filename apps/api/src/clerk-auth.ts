@@ -1,5 +1,6 @@
 import { createClerkClient } from "@clerk/backend";
 import type { Request as ExpressRequest } from "express";
+import { applicationOrigin } from "./origin.js";
 
 export function clerkConfigured() {
   return Boolean(
@@ -27,7 +28,7 @@ export async function clerkEmail(userId: string) {
 }
 export async function resolveClerk(req: ExpressRequest) {
   if (!clerkConfigured()) return null;
-  const origin = process.env.APP_ORIGIN || "http://localhost:3000";
+  const origin = applicationOrigin();
   const headers = new Headers();
   for (const [key, value] of Object.entries(req.headers))
     if (typeof value === "string") headers.set(key, value);

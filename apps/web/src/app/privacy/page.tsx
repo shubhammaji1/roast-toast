@@ -40,6 +40,12 @@ export default function Page() {
         after 30 days without a visit.
       </p>
       <p>
+        We also keep an anonymous total visitor count that remains after
+        individual activity records expire or are deleted. This aggregate
+        contains no IP addresses or browser identifiers. Different browsers,
+        cleared cookies, and expired cookies can count as new visitors.
+      </p>
+      <p>
         When location lookup is enabled, public IP addresses are sent to
         ipapi.com (APILayer) to estimate location. These estimates can reflect a
         VPN or network provider. Local addresses and failed lookups have no

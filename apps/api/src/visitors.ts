@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { applicationOrigin } from "./origin.js";
 import { randomBytes, createHash, randomUUID } from "node:crypto";
 import { transaction } from "./database.js";
 import { ProfileModel, VisitorSession } from "./models.js";
@@ -11,7 +12,7 @@ function attributes() {
     httpOnly: true,
     secure:
       process.env.NODE_ENV === "production" ||
-      process.env.APP_ORIGIN?.startsWith("https://") === true,
+      applicationOrigin().startsWith("https://"),
     sameSite: "lax" as const,
     path: "/",
   };

@@ -1,4 +1,5 @@
 import { openApiDocument } from "./openapi.js";
+import { applicationOrigin } from "./origin.js";
 import { canonicalApiPath, API_BASE_PATH } from "./api-paths.js";
 import express, {
   type Request,
@@ -78,7 +79,7 @@ type AuthedRequest = Request & { member?: any; authSession?: Session; clerkUserI
 export async function createApp(auth: Auth) {
   const app = express();
   const production = process.env.NODE_ENV === "production";
-  const origin = process.env.APP_ORIGIN || "http://localhost:3000";
+  const origin = applicationOrigin();
   app.disable("x-powered-by");
   app.use((req, res, next) => {
     const queryAt = req.url.indexOf("?");

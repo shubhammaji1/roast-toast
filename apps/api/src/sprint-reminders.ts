@@ -2,6 +2,7 @@ import { query, transaction } from "./database.js";
 import { EmailMessage, MilestoneModel } from "./models.js";
 import { deliverEmail } from "./infrastructure.js";
 import { clerkEmail } from "./clerk-auth.js";
+import { applicationOrigin } from "./origin.js";
 
 // Poll persisted deadlines so reminders survive server restarts. Row locks keep
 // concurrent server instances from scheduling the same sprint simultaneously.
@@ -30,7 +31,7 @@ export async function sendSprintReminders(now = new Date()) {
         ? await clerkEmail(row.clerk_user_id)
         : row.email;
       if (!email) continue;
-      const origin = process.env.APP_ORIGIN || "http://localhost:3000";
+      const origin = applicationOrigin();
       const message = {
         to: email,
         subject: "Your seven-day sprint is ready for a decision",

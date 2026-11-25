@@ -8,7 +8,11 @@ import { api } from "../lib/api";
 import { useApp } from "./providers";
 import { ErrorState } from "./ui";
 
-type Online = { online: number; activeWindowSeconds: number };
+type Online = {
+  online: number;
+  activeWindowSeconds: number;
+  totalVisitors?: number;
+};
 type Location = {
   city: string | null;
   region: string | null;
@@ -88,21 +92,36 @@ export function OnlineBadge() {
     refetchOnWindowFocus: true,
   });
   const available = data !== undefined && !isError;
+  const totalVisitors = data?.totalVisitors;
   return (
-    <span
-      className={`online-badge ${available ? "is-live" : ""}`}
-      title={
-        available
-          ? `Browsers active in the last ${data.activeWindowSeconds} seconds. Updates every 30 seconds.`
-          : "Live visitor count is temporarily unavailable."
-      }
-    >
-      <i aria-hidden="true" />
-      {available
-        ? `${data.online.toLocaleString()} online`
-        : isError
-          ? "Online unavailable"
-          : "Checking online…"}
+    <span className="visitor-counts">
+      <span
+        className={`online-badge ${available ? "is-live" : ""}`}
+        title={
+          available
+            ? `Browsers active in the last ${data.activeWindowSeconds} seconds. Updates every 30 seconds.`
+            : "Live visitor count is temporarily unavailable."
+        }
+      >
+        <i aria-hidden="true" />
+        {available
+          ? `${data.online.toLocaleString()} online`
+          : isError
+            ? "Online unavailable"
+            : "Checking online…"}
+      </span>
+      {available && typeof totalVisitors === "number" && (
+        <span
+          className="total-visitors"
+          title={`${totalVisitors.toLocaleString()} browser visitors recorded since tracking began. Different browsers and cleared or expired cookies can count again.`}
+        >
+          {new Intl.NumberFormat("en", {
+            notation: totalVisitors >= 10000 ? "compact" : "standard",
+            maximumFractionDigits: 1,
+          }).format(totalVisitors)}{" "}
+          total visitors
+        </span>
+      )}
     </span>
   );
 }
@@ -170,6 +189,13 @@ export function VisitorAnalytics() {
             <span>
               Active in the last {data.activeWindowSeconds / 60} minutes
             </span>
+          </dd>
+        </div>
+        <div>
+          <dt>Total visitors</dt>
+          <dd>
+            {data.totalVisitors?.toLocaleString() ?? "Total unavailable"}
+            <span>Browsers recorded since tracking began</span>
           </dd>
         </div>
         <div>
@@ -283,7 +309,9 @@ export function VisitorAnalytics() {
         Updates every 30 seconds. Each browser counts once across tabs;
         different devices count separately. IP-based locations are approximate
         and may reflect a VPN or network provider. Unresolved locations appear
-        as unavailable. Activity records are kept for {data.windowDays} days.
+        as unavailable. Activity records are kept for {data.windowDays} days;
+        the anonymous total remains. Cleared or expired cookies can count as a
+        new visitor.
       </p>
     </section>
   );

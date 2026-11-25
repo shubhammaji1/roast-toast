@@ -14,11 +14,13 @@ Legacy `/api/*` requests remain compatibility aliases. Old names `/me`, `/config
 
 | Method and path | Contract |
 | --- | --- |
-| `POST /analytics/heartbeat` | Public presence update: `{path:"/feed"}`. Sets/reuses a separate HTTP-only analytics cookie and returns `{online,activeWindowSeconds:120}`. Rejects query strings, fragments, and extra fields such as a claimed IP or location. |
-| `GET /analytics/online` | Public online browser count and activity window only. No IPs, locations, or identities. |
-| `GET /admin/analytics` | Verified moderator only: `{online,visitorsToday,visitors30d,windowDays:30,activeWindowSeconds:120,topLocations,recentVisitors}`. Today is UTC; top ten locations and latest 50 browsers include saved IP/location details. |
+| `POST /analytics/heartbeat` | Public presence update: `{path:"/feed"}`. Sets/reuses a separate HTTP-only analytics cookie and returns `{online,totalVisitors,activeWindowSeconds:120}`. Rejects query strings, fragments, and extra fields such as a claimed IP or location. |
+| `GET /analytics/online` | Public `{online,totalVisitors,activeWindowSeconds:120}`: current online browsers, the anonymous all-time visitor total, and activity window. No IPs, locations, or identities. |
+| `GET /admin/analytics` | Verified moderator only: `{online,totalVisitors,visitorsToday,visitors30d,windowDays:30,activeWindowSeconds:120,topLocations,recentVisitors}`. Today is UTC; top ten locations and latest 50 browsers include saved IP/location details. |
 
 Online means a heartbeat within two minutes. Browsers share a cookie across tabs; separate browser profiles/devices count separately. Thirty-day totals deduplicate browsers; location totals deduplicate within each location, so a browser that changes networks may appear in more than one. Activity expires after 30 days. `/visitor-session` establishes the analytics cookie before client tracking starts. See [deployment setup](DEPLOYMENT.md#visitor-analytics) for trusted-proxy and server-only ipapi.com configuration.
+
+`totalVisitors` is a persistent anonymous aggregate. It increases once when a previously unrecorded browser cookie sends its first successful heartbeat. Repeated heartbeats, tabs, and IP changes do not add visitors while that browser's activity remains recorded. Cookie expiry/clearing or another browser can create a new counted visitor. The total remains after individual activity records expire or are deleted; no permanent browser identifier or IP ledger is retained for the counter. The counter migration initializes once from existing retained activity; already expired historical visits cannot be reconstructed.
 
 The `/auth/*` routes below serve private moderator accounts. Public posting and interactions do not use them.
 

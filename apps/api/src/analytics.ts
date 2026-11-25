@@ -3,7 +3,8 @@ import { createHash, randomBytes } from "node:crypto";
 import { isIP, BlockList } from "node:net";
 import { rateLimit } from "express-rate-limit";
 import { z } from "zod";
-import { query } from "./database.js";
+import { query, transaction } from "./database.js";
+import { applicationOrigin } from "./origin.js";
 import { sharedRateStore } from "./infrastructure.js";
 
 export const activeWindowSeconds = 120;
@@ -65,7 +66,7 @@ function cookieAttributes() {
     httpOnly: true,
     secure:
       process.env.NODE_ENV === "production" ||
-      process.env.APP_ORIGIN?.startsWith("https://") === true,
+      applicationOrigin().startsWith("https://"),
     sameSite: "lax" as const,
     path: "/",
   };
@@ -191,18 +192,23 @@ export const heartbeatSchema = z.strictObject({
 
 export async function onlineAnalytics() {
   const result = await query(
-    `SELECT count(DISTINCT visitor_id)::int AS online
-    FROM public.analytics_visits WHERE last_seen >= $1`,
+    `SELECT (SELECT count(DISTINCT visitor_id)::int
+      FROM public.analytics_visits WHERE last_seen >= $1) AS online,
+      total_visitors AS "totalVisitors" FROM public.analytics_totals WHERE id = 1`,
     [new Date(Date.now() - activeWindowSeconds * 1000)],
   );
-  return { online: result.rows[0].online, activeWindowSeconds };
+  return {
+    online: result.rows[0].online,
+    totalVisitors: Number(result.rows[0].totalVisitors),
+    activeWindowSeconds,
+  };
 }
 
 export async function adminAnalytics() {
   const cutoff = new Date(Date.now() - analyticsWindowDays * dayMs);
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
-  const [counts, locations, recent] = await Promise.all([
+  const [counts, totals, locations, recent] = await Promise.all([
     query(
       `SELECT count(DISTINCT visitor_id)::int AS "visitors30d",
       count(DISTINCT visitor_id) FILTER (WHERE last_seen >= $2)::int AS "visitorsToday",
@@ -210,6 +216,7 @@ export async function adminAnalytics() {
       FROM public.analytics_visits WHERE last_seen >= $1`,
       [cutoff, today, new Date(Date.now() - activeWindowSeconds * 1000)],
     ),
+    query("SELECT total_visitors FROM public.analytics_totals WHERE id = 1"),
     query(
       `SELECT city, region, country, country_code AS "countryCode", count(DISTINCT visitor_id)::int AS visitors
       FROM public.analytics_visits WHERE last_seen >= $1
@@ -225,6 +232,7 @@ export async function adminAnalytics() {
   ]);
   return {
     ...counts.rows[0],
+    totalVisitors: Number(totals.rows[0].total_visitors),
     windowDays: analyticsWindowDays,
     activeWindowSeconds,
     topLocations: locations.rows,
@@ -269,25 +277,39 @@ export function installPublicAnalytics(app: Express) {
       const now = new Date();
       const day = now.toISOString().slice(0, 10);
       const location = await locationForIp(ip);
-      await query(
-        `INSERT INTO public.analytics_visits
+      await transaction(async () => {
+        // Serialize each browser's first visit across tabs, IP changes and API instances.
+        await query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
+          visitorId,
+        ]);
+        const known = await query(
+          "SELECT 1 FROM public.analytics_visits WHERE visitor_id = $1 LIMIT 1",
+          [visitorId],
+        );
+        await query(
+          `INSERT INTO public.analytics_visits
       (id, visitor_id, ip, visit_day, first_seen, last_seen, path, city, region, country, country_code)
       VALUES ($1, $2, $3::inet, $4, $5, $5, $6, $7, $8, $9, $10)
       ON CONFLICT (id) DO UPDATE SET last_seen = EXCLUDED.last_seen, path = EXCLUDED.path,
         city = EXCLUDED.city, region = EXCLUDED.region, country = EXCLUDED.country, country_code = EXCLUDED.country_code`,
-        [
-          hash(`${visitorId}:${ip}:${day}`),
-          visitorId,
-          ip,
-          day,
-          now,
-          body.path,
-          location.city,
-          location.region,
-          location.country,
-          location.countryCode,
-        ],
-      );
+          [
+            hash(`${visitorId}:${ip}:${day}`),
+            visitorId,
+            ip,
+            day,
+            now,
+            body.path,
+            location.city,
+            location.region,
+            location.country,
+            location.countryCode,
+          ],
+        );
+        if (known.rows.length === 0)
+          await query(
+            "UPDATE public.analytics_totals SET total_visitors = total_visitors + 1 WHERE id = 1",
+          );
+      });
       // Bound cleanup to once per hour per API process; queries always exclude expired data.
       if (Date.now() - lastCleanup > 3600000) {
         lastCleanup = Date.now();

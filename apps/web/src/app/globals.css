@@ -3147,14 +3147,29 @@ textarea[aria-invalid="true"] {
 .admin-row h3 {
   font-size: 19px;
 }
-.topbar-title .online-badge {
+.topbar-title .visitor-counts {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  margin-top: 5px;
   font: 500 12px/1.2 var(--sans);
   letter-spacing: 0;
   color: var(--muted);
+}
+.topbar-title .visitor-counts > span {
+  margin: 0;
+  font: inherit;
+  letter-spacing: 0;
+  color: inherit;
+}
+.topbar-title .visitor-counts .online-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.topbar-title .visitor-counts .total-visitors {
+  display: block;
 }
 .online-badge i,
 .analytics-live-dot {
@@ -3201,7 +3216,7 @@ textarea[aria-invalid="true"] {
 }
 .analytics-metrics {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
   margin: 28px 0;
 }
@@ -3222,6 +3237,7 @@ textarea[aria-invalid="true"] {
   margin: 12px 0 4px;
   font: 600 44px/1.1 var(--display);
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 .analytics-metrics dd > span {
   display: block;
@@ -3315,6 +3331,11 @@ textarea[aria-invalid="true"] {
   padding: 28px 0;
   color: var(--muted);
   font-size: 16px;
+}
+@media (min-width: 801px) and (max-width: 1250px) {
+  .analytics-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 @media (max-width: 800px) {
   .analytics-metrics {

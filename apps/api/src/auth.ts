@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { applicationOrigin } from "./origin.js";
 
 import type { DatabasePool } from "./database.js";
 import { randomBytes } from "node:crypto";
@@ -30,7 +31,8 @@ async function secret() {
 }
 export async function createAuth(db: DatabasePool) {
   const production = process.env.NODE_ENV === "production";
-  if (production && !process.env.APP_ORIGIN?.startsWith("https://"))
+  const origin = applicationOrigin();
+  if (production && !origin.startsWith("https://"))
     throw new Error("Production requires an HTTPS APP_ORIGIN.");
   const redis = getRedis();
   if (production && !redis)
@@ -48,10 +50,10 @@ export async function createAuth(db: DatabasePool) {
   return betterAuth({
     appName: "Roast & Toast",
     basePath: "/api/v1/auth",
-    baseURL: process.env.APP_ORIGIN || "http://localhost:3000",
+    baseURL: origin,
     secret: await secret(),
     database: db as any,
-    trustedOrigins: [process.env.APP_ORIGIN || "http://localhost:3000"],
+    trustedOrigins: [origin],
     secondaryStorage: redis
       ? {
           get: async (key) => redis.get(`rt:auth:${key}`),

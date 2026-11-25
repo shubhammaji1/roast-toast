@@ -37,9 +37,11 @@ import {
 
 let client: QueryClient;
 beforeEach(() => {
-  mocks.api
-    .mockReset()
-    .mockResolvedValue({ online: 1, activeWindowSeconds: 120 });
+  mocks.api.mockReset().mockResolvedValue({
+    online: 1,
+    totalVisitors: 123,
+    activeWindowSeconds: 120,
+  });
   mocks.loading = false;
   mocks.path = "/feed";
   Object.defineProperty(document, "visibilityState", {
@@ -72,6 +74,7 @@ function visibility(value: "visible" | "hidden") {
 
 const analytics = {
   online: 3,
+  totalVisitors: 123,
   visitorsToday: 8,
   visitors30d: 21,
   windowDays: 30,
@@ -187,22 +190,95 @@ it("shows an unavailable count after an error instead of inventing zero visitors
     expect(screen.getByText("Online unavailable")).toBeTruthy(),
   );
   expect(screen.queryByText("0 online")).toBeNull();
+  expect(screen.queryByText(/total visitors/i)).toBeNull();
 });
 
-it("displays the public aggregate count without requesting private analytics", async () => {
-  mocks.api.mockResolvedValue({ online: 7, activeWindowSeconds: 120 });
+it("displays current online and all-time visitor counts without requesting private analytics", async () => {
+  mocks.api.mockResolvedValue({
+    online: 7,
+    totalVisitors: 123,
+    activeWindowSeconds: 120,
+  });
   show(createElement(OnlineBadge));
   await waitFor(() => expect(screen.getByText("7 online")).toBeTruthy());
+  expect(screen.getByText("123 total visitors")).toBeTruthy();
   expect(mocks.api.mock.calls.map(([path]) => path)).toEqual([
     "/analytics/online",
   ]);
   expect(screen.getByText("7 online").title).toContain("120 seconds");
 });
 
+it("displays a real zero total from the API in both the header and admin metrics", async () => {
+  mocks.api.mockResolvedValue({ ...analytics, online: 0, totalVisitors: 0 });
+  show(
+    createElement(
+      "div",
+      {},
+      createElement(OnlineBadge),
+      createElement(VisitorAnalytics),
+    ),
+  );
+  await waitFor(() =>
+    expect(screen.getByText("0 total visitors")).toBeTruthy(),
+  );
+  expect(screen.getByText("0 online")).toBeTruthy();
+  await waitFor(() => expect(screen.getByText("Total visitors")).toBeTruthy());
+  expect(
+    screen.getByText("Total visitors").nextElementSibling?.firstChild
+      ?.textContent,
+  ).toBe("0");
+  expect(screen.queryByText("Total unavailable")).toBeNull();
+});
+
+it("keeps a large total compact while exposing its exact count in the title", async () => {
+  mocks.api.mockResolvedValue({
+    online: 7,
+    totalVisitors: 12345,
+    activeWindowSeconds: 120,
+  });
+  show(createElement(OnlineBadge));
+  await waitFor(() =>
+    expect(screen.getByText("12.3K total visitors")).toBeTruthy(),
+  );
+  expect(screen.getByText("12.3K total visitors").title).toContain(
+    "12,345 browser visitors recorded since tracking began",
+  );
+  expect(screen.getByText("7 online")).toBeTruthy();
+});
+
+it("handles an older API without an all-time total without inventing zero", async () => {
+  const { totalVisitors: _totalVisitors, ...legacy } = analytics;
+  mocks.api.mockResolvedValue(legacy);
+  show(
+    createElement(
+      "div",
+      {},
+      createElement(OnlineBadge),
+      createElement(VisitorAnalytics),
+    ),
+  );
+  await waitFor(() => expect(screen.getByText("3 online")).toBeTruthy());
+  await waitFor(() =>
+    expect(screen.getByText("Total unavailable")).toBeTruthy(),
+  );
+  expect(screen.queryByText(/\d+ total visitors/)).toBeNull();
+  expect(
+    screen.getByText("Total visitors").nextElementSibling?.textContent,
+  ).not.toBe("0");
+  expect(screen.getByText("203.0.113.4")).toBeTruthy();
+});
+
 it("renders ranked locations and the moderator-only visitor IP table", async () => {
   mocks.api.mockResolvedValue(analytics);
   show(createElement(VisitorAnalytics));
   await waitFor(() => expect(screen.getByText("203.0.113.4")).toBeTruthy());
+  expect(
+    screen.getByText("Total visitors").nextElementSibling?.firstChild
+      ?.textContent,
+  ).toBe("123");
+  expect(
+    screen.getByText("Browsers recorded since tracking began"),
+  ).toBeTruthy();
   expect(
     screen.getByText("Visitors today").nextElementSibling?.firstChild
       ?.textContent,
@@ -257,6 +333,8 @@ it("lets a moderator retry a failed analytics request", async () => {
       "Visitor activity is unavailable.",
     ),
   );
+  expect(screen.queryByText("Total visitors")).toBeNull();
+  expect(screen.queryByText("0 total visitors")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Try again" }));
   await waitFor(() => expect(screen.getByText("203.0.113.4")).toBeTruthy());
   expect(screen.queryByRole("alert")).toBeNull();
