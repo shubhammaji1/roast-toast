@@ -10,6 +10,16 @@ Legacy `/api/*` requests remain compatibility aliases. Old names `/me`, `/config
 
 ## Browser identity and private moderator accounts
 
+### Visitor analytics
+
+| Method and path | Contract |
+| --- | --- |
+| `POST /analytics/heartbeat` | Public presence update: `{path:"/feed"}`. Sets/reuses a separate HTTP-only analytics cookie and returns `{online,activeWindowSeconds:120}`. Rejects query strings, fragments, and extra fields such as a claimed IP or location. |
+| `GET /analytics/online` | Public online browser count and activity window only. No IPs, locations, or identities. |
+| `GET /admin/analytics` | Verified moderator only: `{online,visitorsToday,visitors30d,windowDays:30,activeWindowSeconds:120,topLocations,recentVisitors}`. Today is UTC; top ten locations and latest 50 browsers include saved IP/location details. |
+
+Online means a heartbeat within two minutes. Browsers share a cookie across tabs; separate browser profiles/devices count separately. Thirty-day totals deduplicate browsers; location totals deduplicate within each location, so a browser that changes networks may appear in more than one. Activity expires after 30 days. `/visitor-session` establishes the analytics cookie before client tracking starts. See [deployment setup](DEPLOYMENT.md#visitor-analytics) for trusted-proxy and server-only ipapi.com configuration.
+
 The `/auth/*` routes below serve private moderator accounts. Public posting and interactions do not use them.
 
 | Method and path                      | Contract                                                                                                                         |

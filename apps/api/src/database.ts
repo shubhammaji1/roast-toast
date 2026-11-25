@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { Pool } from "pg";
 
 export type Executor = {
@@ -42,16 +42,13 @@ export async function transaction<T>(
   }
 }
 export async function migrateDatabase() {
-  const sql = await readFile(
-    new URL(
-      "../../../supabase/migrations/202611060001_community.sql",
-      import.meta.url,
-    ),
-    "utf8",
-  );
+  const directory = new URL("../../../supabase/migrations/", import.meta.url);
+  const files = (await readdir(directory)).filter((name) => name.endsWith(".sql")).sort();
+  const migrations = await Promise.all(files.map((name) => readFile(new URL(name, directory), "utf8")));
   await transaction(async (client) => {
     await client.query("SELECT pg_advisory_xact_lock(718421)");
-    await client.query(sql);
+    // Committed migrations are idempotent and can safely be re-applied.
+    for (const sql of migrations) await client.query(sql);
   });
 }
 export async function connectDatabase() {

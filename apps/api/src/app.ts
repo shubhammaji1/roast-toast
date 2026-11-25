@@ -52,6 +52,7 @@ import { Media } from "./models.js";
 import { sharedRateStore } from "./infrastructure.js";
 import { communityConfiguration } from "./configuration.js";
 import { resolveClerk, clerkConfigured, deleteClerkUser } from "./clerk-auth.js";
+import { installPublicAnalytics, adminAnalytics, deleteBrowserAnalytics, ensureAnalyticsCookie } from "./analytics.js";
 
 class HttpError extends Error {
   constructor(
@@ -160,6 +161,7 @@ export async function createApp(auth: Auth) {
       resources: {
         ideas: `${API_BASE_PATH}/ideas`,
         visitorSession: `${API_BASE_PATH}/visitor-session`,
+        online: `${API_BASE_PATH}/analytics/online`,
         creatorSupport:
           "Optional Buy Me a Coffee URL on each idea; payments occur externally.",
       },
@@ -173,6 +175,7 @@ export async function createApp(auth: Auth) {
       payments: "external",
     }),
   );
+  installPublicAnalytics(app);
   app.use("/api/v1", async (req: AuthedRequest, res, next) => {
     const clerk = await resolveClerk(req);
     req.clerkUserId = clerk?.clerkUserId;
@@ -255,6 +258,10 @@ export async function createApp(auth: Auth) {
       return fail(403, "This area is for community moderators.");
     return p;
   };
+  app.get("/api/v1/admin/analytics", async (req: AuthedRequest, res) => {
+    admin(req);
+    res.json(await adminAnalytics());
+  });
   const profile = async (userId: string) => {
     const p = await ProfileModel.findOne({ userId, deletedAt: null }).lean();
     if (!p)
@@ -425,7 +432,9 @@ export async function createApp(auth: Auth) {
     await ProfileModel.updateOne({ userId: p.userId }, { $set: input });
     res.json(input);
   });
-  app.get("/api/v1/visitor-session", async (req: AuthedRequest, res) =>
+  app.get("/api/v1/visitor-session", async (req: AuthedRequest, res) => {
+    // Establish a stable browser ID before the client starts route/heartbeat requests.
+    ensureAnalyticsCookie(req, res);
     res.json({
       user:
         (req.authSession ? { ...req.authSession.user, id: req.member.userId } : null) ||
@@ -450,8 +459,8 @@ export async function createApp(auth: Auth) {
       payments: (await communityConfiguration()).coffeeEnabled
         ? "external"
         : "disabled",
-    }),
-  );
+    });
+  });
   app.get("/api/v1/ideas", async (req: AuthedRequest, res) => {
     const query = z
       .object({
@@ -1350,6 +1359,7 @@ export async function createApp(auth: Auth) {
         { session },
       );
     });
+    await deleteBrowserAnalytics(req, res);
     if (p.anonymous) clearVisitor(res);
     res.json({ ok: true });
   });

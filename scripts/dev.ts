@@ -8,6 +8,9 @@ process.env.TEMP = temp;
 process.env.TMP = temp;
 process.env.TMPDIR = temp;
 const env = { ...process.env };
+if (!env.NODE_OPTIONS?.includes("--max-old-space-size")) {
+  env.NODE_OPTIONS = `${env.NODE_OPTIONS || ""} --max-old-space-size=4096`.trim();
+}
 const api = spawn(
   process.execPath,
   ["node_modules/tsx/dist/cli.mjs", "watch", "apps/api/src/server.ts"],

@@ -4,6 +4,7 @@ import "./globals.css";
 import "./readability.css";
 import { Providers } from "@/components/providers";
 import { Shell } from "@/components/shell";
+import { VisitorTracker } from "@/components/visitor-analytics";
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -49,6 +50,7 @@ export default function RootLayout({
           on this element only so mismatches within the app remain visible. */}
       <body suppressHydrationWarning>
         <Providers>
+          <VisitorTracker />
           <Shell>{children}</Shell>
         </Providers>
       </body>

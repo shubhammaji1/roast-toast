@@ -8,8 +8,10 @@ import {
   experimentProgressSchema,
   profileSchema,
 } from "@roast/domain";
+import { heartbeatSchema } from "./analytics.js";
 
 const bodies: Record<string, z.ZodType> = {
+  "POST /api/v1/analytics/heartbeat": heartbeatSchema,
   "POST /api/v1/workspace/link": z.object({}),
   "PATCH /api/v1/workspace/preferences": z.object({ sprintReminders: z.boolean() }),
   "POST /api/v1/ideas": ideaSchema,
@@ -44,8 +46,12 @@ const publicReads = new Set([
   "/api/v1/profiles/{username}",
   "/api/v1/media/{id}",
   "/api/v1/community-settings",
+  "/api/v1/analytics/online",
 ]);
 const summaries: Record<string, string> = {
+  "GET /api/v1/analytics/online": "Count browsers active during the past two minutes; no visitor details",
+  "POST /api/v1/analytics/heartbeat": "Record browser presence and approximate IP location with a private 30-day analytics cookie",
+  "GET /api/v1/admin/analytics": "Moderator-only 30-day visitor counts, top locations and recent IP addresses; today is UTC",
   "GET /api/v1/my-sprints": "List the current creator's active or completed sprints",
   "GET /api/v1/ideas": "Search and cursor-paginate visible ideas",
   "GET /api/v1/ideas/{id}": "Read an idea and its bounded discussion/journey",
@@ -114,7 +120,7 @@ export function openApiDocument(app: Express, origin: string) {
         description:
           "See docs/API.md for detailed authorization, privacy and state transition contracts.",
         security:
-          method === "get" && publicReads.has(path)
+          (method === "get" && publicReads.has(path)) || path === "/api/v1/analytics/heartbeat"
             ? []
             : [{ SessionCookie: [] }],
         parameters,

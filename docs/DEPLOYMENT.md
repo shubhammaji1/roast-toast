@@ -28,6 +28,20 @@ Allow at least 25 seconds for a graceful container shutdown (for Docker, `--stop
 
 ## Acceptance and recovery
 
+### Visitor analytics
+
+Run `npm run db:migrate` before deploying this feature. The migration adds private PostgreSQL analytics tables with row-level security and no browser/API-role access. The migration runner applies all committed SQL migrations in filename order; they are idempotent.
+
+The header displays a public online count. Verified moderators can open **Moderation → Online** at `/admin` to see browsers active within two minutes, unique browsers seen today (UTC), unique browsers in the last 30 days, the ten leading locations, and up to 50 recent browsers with IP addresses and their last page. Separate browser profiles/devices count separately. These are browser activity counts, not verified people or a count of page views. A browser can appear in more than one location if its network changes.
+
+The API looks up public IPs using `https://api.ipapi.com/api/{ip}?access_key=...`, following the [ipapi.com documentation](https://docs.apilayer.com/ipapi/docs/getting-started). Set `IPAPI_KEY` on the API host (Render) to your **ipapi.com** access key and `IPAPI_ENABLED=1`. No ipapi key is needed on Vercel; keep the existing `API_INTERNAL_URL` pointing to the Render API origin without an `/api` suffix. Keys from `ipapi.co` belong to a different service and cannot be used here. Only the IP, city, region, country, and country code response fields are requested.
+
+[Provider plans and quotas](https://ipapi.com/pricing) apply. Missing keys skip external lookups; authentication, quota, plan, or network errors produce an unavailable location while visitor counts and IP recording continue. The integration uses HTTPS and does not fall back to HTTP. Successful lookups are cached in PostgreSQL for seven days; failed lookups are cached for 15 minutes. After replacing an invalid key, allow up to 15 minutes for an existing failed lookup to retry. `IPAPI_ENABLED=0` disables external lookups. No geolocation credentials are exposed to the browser.
+
+Client addresses come from Express `req.ip`. With `TRUST_PROXY` unset, forwarded headers are ignored; requests through the local Next.js proxy may show a loopback address and no location. Enable `TRUST_PROXY=1` only with an ingress that replaces the forwarded client-IP header and a private API reachable only through that trusted path. Next.js rewrites alone preserve incoming forwarded headers and are insufficient to establish their trust. Verify the IP shown in staging matches the browser's public IP before relying on location rankings. Do not accept IP addresses supplied in the heartbeat body.
+
+Activity records are excluded from reports after 30 days and physically removed during the next hourly cleanup triggered by a heartbeat. The analytics cookie expires after 30 days without a visit. Query strings and fragments are excluded from tracked paths. Browser-data deletion also removes activity associated with that browser's analytics cookie. The privacy page discloses IP storage and the ipapi.com lookup.
+
 ### Demo data cleanup
 
 Demo seeding is off by default. For a disposable development database, explicitly set `SEED_DEMO=1` before starting the API. Production always skips seeding. Isolated automated tests enable their own fixtures. Keep the `demo-seeded` setting after cleanup so even an explicitly enabled development restart cannot silently recreate removed sample content.

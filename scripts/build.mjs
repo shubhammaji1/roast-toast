@@ -10,6 +10,9 @@ const env = {
   TMP: temp,
   TMPDIR: temp,
 };
+if (!env.NODE_OPTIONS?.includes("--max-old-space-size")) {
+  env.NODE_OPTIONS = `${env.NODE_OPTIONS || ""} --max-old-space-size=4096`.trim();
+}
 async function run(file, args, cwd) {
   await new Promise((done, fail) => {
     const child = spawn(process.execPath, [resolve(file), ...args], {

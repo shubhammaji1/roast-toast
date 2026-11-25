@@ -25,6 +25,7 @@ import { authClient } from "@/lib/auth-client";
 import { useApp } from "./providers";
 import { Avatar, Empty, ErrorState, Loading, Modal } from "./ui";
 import { IdeaCard } from "./idea-card";
+import { VisitorAnalytics } from "./visitor-analytics";
 
 export function ProfilePage({ username }: { username?: string }) {
   const { me, loading, guard, toast } = useApp();
@@ -784,10 +785,11 @@ export function AdminPage() {
       </span>
       <h1 className="page-title">Keep the table in good shape.</h1>
       <div className="detail-tabs">
-        {["reports", "users", "appeals", "orders", "audit", "settings"].map(
+        {["reports", "online", "users", "appeals", "orders", "audit", "settings"].map(
           (t) => (
             <button
               className={tab === t ? "active" : ""}
+              aria-pressed={tab === t}
               onClick={() => setTab(t)}
               key={t}
             >
@@ -796,7 +798,9 @@ export function AdminPage() {
           ),
         )}
       </div>
-      {tab === "settings" ? (
+      {tab === "online" ? (
+        <VisitorAnalytics />
+      ) : tab === "settings" ? (
         <AdminSettings />
       ) : result.isPending ? (
         <Loading />

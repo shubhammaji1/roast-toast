@@ -21,6 +21,7 @@ import {
 import { useState } from "react";
 import { useApp } from "./providers";
 import { Brand } from "./ui";
+import { OnlineBadge } from "./visitor-analytics";
 
 const nav = [
   { href: "/feed", label: "The table", icon: Home },
@@ -114,7 +115,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       <div className="main-shell">
         <header className="topbar">
           <Link prefetch={false} href="/" className="topbar-title">
-            The idea café<span>OPEN MINDS. OPEN TABLE.</span>
+            The idea café<OnlineBadge />
           </Link>
           <form
             className="search-box"
