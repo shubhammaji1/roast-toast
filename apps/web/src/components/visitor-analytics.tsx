@@ -35,6 +35,17 @@ type Analytics = Online & {
 const onlineKey = ["visitor-online"];
 const refreshInterval = 30_000;
 
+function formatVisitorTotal(totalVisitors: number) {
+  return new Intl.NumberFormat("en", {
+    notation: totalVisitors >= 10000 ? "compact" : "standard",
+    maximumFractionDigits: 1,
+  }).format(totalVisitors);
+}
+
+function visitorTotalTitle(totalVisitors: number) {
+  return `${totalVisitors.toLocaleString()} browser visitors recorded since tracking began. Different browsers and cleared or expired cookies can count again.`;
+}
+
 export function VisitorTracker() {
   const pathname = usePathname();
   const { loading } = useApp();
@@ -113,16 +124,43 @@ export function OnlineBadge() {
       {available && typeof totalVisitors === "number" && (
         <span
           className="total-visitors"
-          title={`${totalVisitors.toLocaleString()} browser visitors recorded since tracking began. Different browsers and cleared or expired cookies can count again.`}
+          title={visitorTotalTitle(totalVisitors)}
         >
-          {new Intl.NumberFormat("en", {
-            notation: totalVisitors >= 10000 ? "compact" : "standard",
-            maximumFractionDigits: 1,
-          }).format(totalVisitors)}{" "}
-          total visitors
+          {formatVisitorTotal(totalVisitors)} total visitors
         </span>
       )}
     </span>
+  );
+}
+
+export function SidebarTotalVisitors() {
+  // The header and heartbeat keep this query fresh; this observer adds no polling.
+  const { data, isError, isPending } = useQuery<Online>({
+    queryKey: onlineKey,
+    queryFn: () => api<Online>("/analytics/online", { cache: "no-store" }),
+    enabled: false,
+  });
+  const totalVisitors = isError ? undefined : data?.totalVisitors;
+  const available = typeof totalVisitors === "number";
+  return (
+    <div
+      className="sidebar-visitors"
+      title={
+        available
+          ? visitorTotalTitle(totalVisitors)
+          : isPending
+            ? "Checking total visitors…"
+            : "Total visitor count is temporarily unavailable."
+      }
+    >
+      <Users size={19} strokeWidth={1.7} aria-hidden="true" />
+      <div>
+        <span>Total visitors</span>
+        <strong>
+          {available ? formatVisitorTotal(totalVisitors) : isPending ? "…" : "—"}
+        </strong>
+      </div>
+    </div>
   );
 }
 

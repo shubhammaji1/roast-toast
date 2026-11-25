@@ -434,6 +434,7 @@ svg {
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  overflow-y: auto;
 }
 .sidebar-inner > nav {
   flex-shrink: 0;
@@ -478,7 +479,8 @@ svg {
 }
 .sidebar-bottom {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   justify-content: space-between;
   border-top: 1px solid var(--line);
   gap: 10px;
@@ -487,6 +489,34 @@ svg {
   color: var(--muted);
   flex-shrink: 0;
   margin-top: auto;
+}
+.sidebar-visitors {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fffefa;
+  color: var(--green);
+}
+.sidebar-visitors > div {
+  min-width: 0;
+}
+.sidebar-visitors span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+.sidebar-visitors strong {
+  display: block;
+  font-size: 22px;
+  line-height: 1.3;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  color: var(--ink);
 }
 .sidebar-bottom a {
   display: flex;
@@ -3169,7 +3199,15 @@ textarea[aria-invalid="true"] {
   gap: 6px;
 }
 .topbar-title .visitor-counts .total-visitors {
+  display: none;
+}
+.nav-collapsed .topbar-title .visitor-counts .total-visitors {
   display: block;
+}
+@media (max-width: 700px) {
+  .topbar-title .visitor-counts .total-visitors {
+    display: block;
+  }
 }
 .online-badge i,
 .analytics-live-dot {

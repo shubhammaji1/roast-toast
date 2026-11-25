@@ -21,7 +21,7 @@ import {
 import { useState } from "react";
 import { useApp } from "./providers";
 import { Brand } from "./ui";
-import { OnlineBadge } from "./visitor-analytics";
+import { OnlineBadge, SidebarTotalVisitors } from "./visitor-analytics";
 
 const nav = [
   { href: "/feed", label: "The table", icon: Home },
@@ -102,6 +102,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             )}
           </nav>
           <div className="sidebar-bottom">
+            <SidebarTotalVisitors />
             <Link
               prefetch={false}
               href="/community"
